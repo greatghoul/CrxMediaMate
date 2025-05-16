@@ -42,6 +42,18 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     
     // Return true to indicate we'll respond asynchronously
     return true;
+  } else if (request.action === "queryNotionRecords") {
+    queryNotionRecords()
+      .then((records) => {
+        sendResponse({ success: true, records });
+      })
+      .catch(error => {
+        console.error("Error querying Notion records:", error);
+        sendResponse({ success: false, error: error.message });
+      });
+    
+    // Return true to indicate we'll respond asynchronously
+    return true;
   }
 });
 
@@ -156,6 +168,75 @@ async function postToNotion(data) {
       
     } catch (error) {
       console.error("Error posting to Notion:", error);
+      reject(error);
+    }
+  });
+}
+
+// Function to query records from Notion database
+async function queryNotionRecords() {
+  return new Promise(async (resolve, reject) => {
+    if (!notionToken) {
+      reject(new Error("Notion API token not found. Please check your settings.js file."));
+      return;
+    }
+    
+    const NOTION_DATABASE_ID = "1f55931b1ae380af993eeac13b7bed02";
+    
+    try {
+      // Query the database for records with status "待发布"
+      const response = await fetch(`https://api.notion.com/v1/databases/${NOTION_DATABASE_ID}/query`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${notionToken}`,
+          'Content-Type': 'application/json',
+          'Notion-Version': '2022-06-28'
+        },
+        body: JSON.stringify({
+          filter: {
+            property: "状态",
+            select: {
+              equals: "待发布"
+            }
+          },
+          sorts: [
+            {
+              timestamp: "created_time",
+              direction: "ascending"
+            }
+          ]
+        })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        reject(new Error(`Notion API error: ${JSON.stringify(errorData)}`));
+        return;
+      }
+      
+      const data = await response.json();
+      
+      // Extract the relevant info from each record
+      const records = data.results.map((page) => {
+        // Extract the description (title)
+        const description = page.properties["描述"]?.title?.[0]?.text?.content || "无描述";
+        
+        // Extract the image URL
+        const imageFile = page.properties["图片"]?.files?.[0];
+        const imageUrl = imageFile?.type === "external" ? imageFile.external.url : null;
+        
+        return {
+          id: page.id,
+          description,
+          imageUrl
+        };
+      });
+      
+      console.log(`Successfully fetched ${records.length} records from Notion`);
+      resolve(records);
+      
+    } catch (error) {
+      console.error("Error querying Notion:", error);
       reject(error);
     }
   });

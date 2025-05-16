@@ -1,63 +1,98 @@
 document.addEventListener('DOMContentLoaded', function() {
   const dynamicContent = document.getElementById('dynamicContent');
+  const refreshButton = document.getElementById('refreshButton');
+  const copyButton = document.getElementById('copyButton');
   
-  // Default message
-  let message = 'Hello World!';
+  let articleContent = '';
+  let records = [];
   
-  // Create message input
-  const messageInput = document.createElement('input');
-  messageInput.type = 'text';
-  messageInput.value = message;
-  messageInput.placeholder = '输入新内容...';
-  messageInput.style.width = '80%';
-  messageInput.style.padding = '10px';
-  messageInput.style.marginBottom = '15px';
-  messageInput.style.borderRadius = '4px';
-  messageInput.style.border = '1px solid #ccc';
+  // Function to fetch records from Notion database
+  const fetchNotionRecords = async () => {
+    try {
+      dynamicContent.innerHTML = '<div class="loading">正在加载内容，请稍候...</div>';
+      
+      // Send a message to background.js to query Notion
+      const response = await new Promise((resolve) => {
+        chrome.runtime.sendMessage(
+          { action: "queryNotionRecords" },
+          (response) => resolve(response)
+        );
+      });
+      
+      if (!response.success) {
+        throw new Error(response.error || '获取数据失败');
+      }
+      
+      // Store the records
+      records = response.records;
+      
+      // Generate article content
+      generateArticle(records);
+      
+    } catch (error) {
+      console.error("Error fetching Notion records:", error);
+      dynamicContent.innerHTML = `
+        <div class="error">
+          <p><strong>获取数据失败：</strong> ${error.message}</p>
+          <p>请检查您的网络连接和Notion API Token是否设置正确。</p>
+        </div>
+      `;
+    }
+  };
   
-  // Create update button
-  const updateButton = document.createElement('button');
-  updateButton.textContent = '更新内容';
-  updateButton.style.backgroundColor = '#4285f4';
-  updateButton.style.color = 'white';
-  updateButton.style.border = 'none';
-  updateButton.style.padding = '10px 15px';
-  updateButton.style.borderRadius = '4px';
-  updateButton.style.cursor = 'pointer';
-  updateButton.style.marginLeft = '10px';
-  
-  // Create content wrapper
-  const contentWrapper = document.createElement('div');
-  contentWrapper.style.marginTop = '20px';
-  
-  // Create heading
-  const heading = document.createElement('h2');
-  heading.textContent = '动态内容';
-  
-  // Create content display
-  const content = document.createElement('p');
-  content.textContent = message;
-  content.style.fontSize = '24px';
-  content.style.fontWeight = 'bold';
-  content.style.color = '#333';
-  content.style.padding = '20px';
-  content.style.border = '1px solid #ddd';
-  content.style.borderRadius = '5px';
-  content.style.backgroundColor = '#f9f9f9';
-  
-  // Update function
-  const updateContent = () => {
-    message = messageInput.value || 'Hello World!';
-    content.textContent = message;
+  // Function to generate article from records
+  const generateArticle = (records) => {
+    if (!records || records.length === 0) {
+      dynamicContent.innerHTML = '<div class="error">没有找到待发布的记录。</div>';
+      articleContent = '';
+      return;
+    }
     
-    // Add animation effect
-    let opacity = 0;
-    content.style.opacity = opacity;
+    // Create the article container
+    const articleContainer = document.createElement('div');
+    articleContainer.className = 'article-container';
+    
+    // Build the article content
+    articleContent = '';
+    let articleHtml = '';
+    
+    records.forEach((record, index) => {
+      // Format the index number with leading zero if needed
+      const formattedIndex = String(index + 1).padStart(2, '0');
+      
+      // Create the text content for this record
+      const recordContent = `${formattedIndex}. ${record.description}\n\n[图片${index + 1}]\n\n`;
+      articleContent += recordContent;
+      
+      // Create the HTML for this record
+      const articleItem = document.createElement('div');
+      articleItem.className = 'article-item';
+      
+      const articleDescription = document.createElement('div');
+      articleDescription.className = 'article-description';
+      articleDescription.textContent = `${formattedIndex}. ${record.description}`;
+      
+      const articleImage = document.createElement('img');
+      articleImage.className = 'article-image';
+      articleImage.src = record.imageUrl;
+      articleImage.alt = record.description;
+      
+      articleItem.appendChild(articleDescription);
+      articleItem.appendChild(articleImage);
+      articleContainer.appendChild(articleItem);
+    });
+    
+    // Clear the dynamic content and append the article
+    dynamicContent.innerHTML = '';
+    dynamicContent.appendChild(articleContainer);
     
     // Fade in animation
+    let opacity = 0;
+    articleContainer.style.opacity = opacity;
+    
     const fadeIn = setInterval(() => {
       opacity += 0.05;
-      content.style.opacity = opacity;
+      articleContainer.style.opacity = opacity;
       
       if (opacity >= 1) {
         clearInterval(fadeIn);
@@ -65,25 +100,27 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 50);
   };
   
-  // Add event listener to button
-  updateButton.addEventListener('click', updateContent);
-  
-  // Add event listener for Enter key
-  messageInput.addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') {
-      updateContent();
+  // Copy article content to clipboard
+  const copyArticleToClipboard = () => {
+    if (!articleContent) {
+      alert('没有可复制的内容');
+      return;
     }
-  });
+    
+    navigator.clipboard.writeText(articleContent)
+      .then(() => {
+        alert('文章内容已复制到剪贴板');
+      })
+      .catch((error) => {
+        console.error('复制失败:', error);
+        alert('复制失败，请手动复制');
+      });
+  };
   
-  // Append elements to the container
-  contentWrapper.appendChild(heading);
-  contentWrapper.appendChild(content);
+  // Add event listeners
+  refreshButton.addEventListener('click', fetchNotionRecords);
+  copyButton.addEventListener('click', copyArticleToClipboard);
   
-  // Append input, button and content to container
-  dynamicContent.appendChild(messageInput);
-  dynamicContent.appendChild(updateButton);
-  dynamicContent.appendChild(contentWrapper);
-  
-  // Initial fade in
-  updateContent();
+  // Initial fetch
+  fetchNotionRecords();
 });

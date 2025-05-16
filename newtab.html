@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>沙雕图 - New Tab</title>
+  <title>沙雕图 - 生成文章</title>
   <link rel="stylesheet" href="css/popup.css">  <style>
     body {
       font-family: Arial, sans-serif;
@@ -16,7 +16,6 @@
       max-width: 800px;
       margin: 20px auto;
       padding: 20px;
-      text-align: center;
       border-radius: 8px;
       background-color: #fff;
       box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
@@ -25,6 +24,7 @@
     h1 {
       color: #333;
       margin-bottom: 30px;
+      text-align: center;
     }
     
     #dynamicContent {
@@ -33,13 +33,66 @@
       border-radius: 5px;
       min-height: 200px;
     }
+    
+    .article-container {
+      text-align: left;
+    }
+    
+    .article-item {
+      margin-bottom: 30px;
+    }
+    
+    .article-description {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 15px;
+    }
+    
+    .article-image {
+      max-width: 100%;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      margin-bottom: 10px;
+    }
+    
+    .loading {
+      text-align: center;
+      font-size: 18px;
+      color: #666;
+      padding: 30px;
+    }
+    
+    .error {
+      color: #d32f2f;
+      text-align: center;
+      font-size: 16px;
+      padding: 20px;
+      border: 1px solid #ffa8a8;
+      background-color: #fff2f2;
+      border-radius: 5px;
+    }
+    
+    .controls {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    
+    button {
+      width: auto !important;
+      max-width: 200px;
+    }
   </style>
 </head>
 <body>
   <div class="content-container">
-    <h1>沙雕图 - 新标签页</h1>
+    <h1>沙雕图 - 待发布文章</h1>
+    <div class="controls">
+      <button id="refreshButton" class="secondary-button">刷新内容</button>
+      <button id="copyButton" class="secondary-button">复制文章</button>
+    </div>
     <div id="dynamicContent">
-      <!-- Dynamic content will be inserted here by JavaScript -->
+      <div class="loading">正在加载内容，请稍候...</div>
     </div>
   </div>
   
