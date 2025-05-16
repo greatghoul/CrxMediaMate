@@ -1,27 +1,27 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>沙雕图</title>
   <link rel="stylesheet" href="css/popup.css">
 </head>
-<body>  <div class="container">
+
+<body>
+  <div class="container">
     <div class="image-preview">
       <img id="preview" src="" alt="图片预览">
     </div>
-      <form id="saveForm">
+    <form id="saveForm">
       <textarea id="note" placeholder="添加关于这个沙雕图的笔记..."></textarea>
-      
+
       <button type="submit" id="saveButton">发布到Notion</button>
     </form>
-        
     <div id="statusMessage" class="status-message"></div>
-    <div class="loading-indicator" id="loadingIndicator" style="display:none;">
-      <div class="spinner"></div>
-    </div>
   </div>
-  
+
   <script src="js/popup.js"></script>
 </body>
+
 </html>

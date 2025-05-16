@@ -19,18 +19,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const saveButton = document.getElementById('saveButton');
     
     // Disable button during submission
-    saveButton.disabled = true;
-      // Show initial status message and spinner
+    saveButton.disabled = true;    // Show initial status message
     statusMessage.textContent = "上传图片中...";
     statusMessage.className = "status-message info";
     statusMessage.style.display = "block";
-    document.getElementById('loadingIndicator').style.display = "flex";
     
     // Post to Notion database
     postToNotion(imageUrl, note, statusMessage)      .then(() => {
-        // Hide spinner
-        document.getElementById('loadingIndicator').style.display = "none";
-        
         // Show success message with animation
         statusMessage.style.display = "none"; // Reset for new animation
         setTimeout(() => {
@@ -39,18 +34,14 @@ document.addEventListener('DOMContentLoaded', function() {
           statusMessage.style.display = "block";
           
           // Apply a subtle bounce effect to the success message
-          statusMessage.style.animation = "fade-in 0.5s ease-in-out";
+          // statusMessage.style.animation = "fade-in 0.5s ease-in-out";
           
           // Close the window after 3 seconds
           setTimeout(() => {
             window.close();
           }, 3000);
         }, 100);
-      })
-      .catch(error => {
-        // Hide spinner
-        document.getElementById('loadingIndicator').style.display = "none";
-        
+      })      .catch(error => {
         // Show error message
         console.error("Notion发布失败:", error);
         statusMessage.textContent = "发布到Notion失败: " + error.message;
