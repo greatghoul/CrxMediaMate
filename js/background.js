@@ -41,14 +41,25 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       });
     
     // Return true to indicate we'll respond asynchronously
-    return true;
-  } else if (request.action === "queryNotionRecords") {
+    return true;  } else if (request.action === "queryNotionRecords") {
     queryNotionRecords()
       .then((records) => {
         sendResponse({ success: true, records });
       })
       .catch(error => {
         console.error("Error querying Notion records:", error);
+        sendResponse({ success: false, error: error.message });
+      });
+    
+    // Return true to indicate we'll respond asynchronously
+    return true;
+  } else if (request.action === "markPagesAsPublished") {
+    updateNotionPagesStatus(request.pageIds)
+      .then(() => {
+        sendResponse({ success: true });
+      })
+      .catch(error => {
+        console.error("Error updating Notion page status:", error);
         sendResponse({ success: false, error: error.message });
       });
     
@@ -237,6 +248,62 @@ async function queryNotionRecords() {
       
     } catch (error) {
       console.error("Error querying Notion:", error);
+      reject(error);
+    }
+  });
+}
+
+// Function to update Notion page status to "已发布"
+async function updateNotionPagesStatus(pageIds) {
+  return new Promise(async (resolve, reject) => {
+    if (!notionToken) {
+      reject(new Error("Notion API token not found. Please check your settings.js file."));
+      return;
+    }
+    
+    if (!pageIds || !pageIds.length) {
+      reject(new Error("No page IDs provided"));
+      return;
+    }
+    
+    try {
+      // Process all page updates concurrently
+      const updatePromises = pageIds.map(async (pageId) => {
+        const response = await fetch(`https://api.notion.com/v1/pages/${pageId}`, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${notionToken}`,
+            'Content-Type': 'application/json',
+            'Notion-Version': '2022-06-28'
+          },
+          body: JSON.stringify({
+            properties: {
+              "状态": {
+                type: "select",
+                select: {
+                  name: "已发布"
+                }
+              }
+            }
+          })
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(`Failed to update page ${pageId}: ${JSON.stringify(errorData)}`);
+        }
+        
+        return await response.json();
+      });
+      
+      // Wait for all updates to complete
+      await Promise.all(updatePromises);
+      
+      console.log(`Successfully updated ${pageIds.length} pages to "已发布" status`);
+      resolve();
+      
+    } catch (error) {
+      console.error("Error updating Notion pages:", error);
       reject(error);
     }
   });

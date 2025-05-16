@@ -118,6 +118,16 @@ button {
   font-weight: bold;
 }
 
+.publish-button {
+  background-color: #ea4335;
+  color: white;
+  font-weight: bold;
+}
+
 button:hover {
   background-color: #3367d6;
+}
+
+.publish-button:hover {
+  background-color: #d33426;
 }

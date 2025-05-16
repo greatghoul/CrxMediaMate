@@ -2,6 +2,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const dynamicContent = document.getElementById('dynamicContent');
   const refreshButton = document.getElementById('refreshButton');
   const copyButton = document.getElementById('copyButton');
+  const publishedButton = document.getElementById('publishedButton');
   
   let articleContent = '';
   let records = [];
@@ -126,10 +127,63 @@ document.addEventListener('DOMContentLoaded', function() {
     selection.addRange(range);
     
   };
-  
+    // Function to mark pages as published
+  const markPagesAsPublished = async () => {
+    if (!records || records.length === 0) {
+      return;
+    }
+    
+    try {
+      // Disable button and show loading status
+      publishedButton.disabled = true;
+      publishedButton.textContent = "正在更新...";
+      
+      // Get all page IDs from the current records
+      const pageIds = records.map(record => record.id);
+      
+      // Send a message to background.js to update the Notion pages
+      const response = await new Promise((resolve) => {
+        chrome.runtime.sendMessage(
+          { 
+            action: "markPagesAsPublished",
+            pageIds: pageIds
+          },
+          (response) => resolve(response)
+        );
+      });
+      
+      if (!response.success) {
+        throw new Error(response.error || '更新状态失败');
+      }
+      
+      // Refresh the content after successful update
+      fetchNotionRecords();
+      
+    } catch (error) {
+      console.error("Error marking pages as published:", error);
+      const errorMessage = document.createElement('div');
+      errorMessage.className = 'error';
+      errorMessage.innerHTML = `<p><strong>更新状态失败：</strong> ${error.message}</p>`;
+      
+      // Show error message temporarily
+      dynamicContent.insertBefore(errorMessage, dynamicContent.firstChild);
+      
+      setTimeout(() => {
+        if (errorMessage.parentNode === dynamicContent) {
+          dynamicContent.removeChild(errorMessage);
+        }
+      }, 5000);
+    } finally {
+      // Re-enable the button
+      publishedButton.disabled = false;
+      publishedButton.textContent = "发布完成";
+    }
+  };
+
   // Add event listeners
   refreshButton.addEventListener('click', fetchNotionRecords);
   copyButton.addEventListener('click', selectAllArticleContent);
+  publishedButton.addEventListener('click', markPagesAsPublished);
   
   // Initial fetch
   fetchNotionRecords();
