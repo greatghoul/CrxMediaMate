@@ -13,7 +13,7 @@ body {
 
 .image-preview {
   width: 100%;
-  height: 350px;
+  height: 320px;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -26,14 +26,8 @@ body {
 
 .image-preview img {
   max-width: 100%;
-  height: 350px;
+  height: 320px;
   object-fit: contain;
-}
-
-label {
-  display: block;
-  margin-bottom: 5px;
-  font-weight: bold;
 }
 
 textarea {
@@ -86,10 +80,4 @@ button:hover {
   flex-direction: column;
   width: 100%;
   height: 100%;
-}
-
-form {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
 }

@@ -6,7 +6,8 @@
   "permissions": ["contextMenus", "clipboardWrite", "clipboardRead", "storage"],
   "host_permissions": ["<all_urls>"],
   "background": {
-    "service_worker": "js/background.js"
+    "service_worker": "js/background.js",
+    "type": "module"
   },
   "action": {
     "default_popup": "popup.html",

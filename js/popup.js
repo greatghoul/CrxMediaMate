@@ -26,27 +26,22 @@ document.addEventListener('DOMContentLoaded', function() {
         statusMessage.className = "status-message success";
         statusMessage.style.display = "block";
         
-        // Store in Chrome storage for history (optional)
-        chrome.storage.local.get({imageHistory: []}, function(result) {
-          const history = result.imageHistory;
-          history.push({
-            imageUrl: imageUrl,
-            note: note,
-            date: new Date().toISOString()
+        // Post to Notion database
+        postToNotion(imageUrl, note)
+          .then(() => {
+            statusMessage.textContent = "沙雕图已保存到剪贴板并发布到Notion！";
+
+            // Close the window after 3 seconds
+            setTimeout(() => {
+              window.close();
+            }, 3000);
+          })
+          .catch(error => {
+            console.error("Notion发布失败:", error);
+            statusMessage.textContent = "已保存到剪贴板，但Notion发布失败";
           });
-          
-          // Keep only the last 50 entries
-          if (history.length > 50) {
-            history.shift();
-          }
-          
-          chrome.storage.local.set({imageHistory: history});
-        });
         
-        // Close the window after 2 seconds
-        setTimeout(() => {
-          window.close();
-        }, 2000);
+
       })
       .catch(error => {
         // Show error message
@@ -76,6 +71,34 @@ document.addEventListener('DOMContentLoaded', function() {
       // For now, we're just writing the text data
       
       return Promise.resolve();
+    } catch (error) {
+      return Promise.reject(error);
+    }
+  }
+  
+  // Function to post to Notion database
+  async function postToNotion(imageUrl, note) {
+    const NOTION_DATABASE_ID = "1f55931b1ae380af993eeac13b7bed02";
+    
+    try {
+      // We'll need to use background.js as a proxy to make the Notion API call
+      // because of CORS restrictions in popup.js
+      return new Promise((resolve, reject) => {
+        chrome.runtime.sendMessage({
+          action: "postToNotion",
+          data: {
+            databaseId: NOTION_DATABASE_ID,
+            imageUrl: imageUrl,
+            note: note
+          }
+        }, response => {
+          if (response.success) {
+            resolve();
+          } else {
+            reject(new Error(response.error || "Failed to post to Notion"));
+          }
+        });
+      });
     } catch (error) {
       return Promise.reject(error);
     }

@@ -1,0 +1,12 @@
+/**
+ * Settings configuration for the 沙雕图 extension
+ * 
+ * Copy this file to settings.js and update with your actual API tokens
+ * settings.js should not be committed to your git repository
+ */
+
+// Notion API Token from https://www.notion.so/my-integrations
+export const notionToken = "your-notion-token-here";
+
+// ImgBB API Key from https://api.imgbb.com/
+export const imgbbApiKey = "your-imgbb-api-key-here";
