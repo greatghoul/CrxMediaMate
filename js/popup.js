@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const urlParams = new URLSearchParams(window.location.search);
   const imageUrl = urlParams.get('imageUrl');
   const previewImg = document.getElementById('preview');
-    // Set the image src if available
+  // Set the image src if available
   if (imageUrl) {
     previewImg.src = imageUrl;
   } else {
@@ -19,7 +19,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const statusMessage = document.getElementById('statusMessage');
     
     // Save image and note to clipboard
-    saveToClipboard(imageUrl, note)      .then(() => {
+    saveToClipboard(imageUrl, note)
+      .then(() => {
         // Show success message
         statusMessage.textContent = "沙雕图已保存到剪贴板！";
         statusMessage.className = "status-message success";
@@ -46,7 +47,8 @@ document.addEventListener('DOMContentLoaded', function() {
         setTimeout(() => {
           window.close();
         }, 2000);
-      })      .catch(error => {
+      })
+      .catch(error => {
         // Show error message
         statusMessage.textContent = "错误: " + error.message;
         statusMessage.className = "status-message error";
