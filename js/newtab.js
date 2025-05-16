@@ -39,8 +39,7 @@ document.addEventListener('DOMContentLoaded', function() {
       `;
     }
   };
-  
-  // Function to generate article from records
+    // Function to generate article from records
   const generateArticle = (records) => {
     if (!records || records.length === 0) {
       dynamicContent.innerHTML = '<div class="error">没有找到待发布的记录。</div>';
@@ -52,8 +51,16 @@ document.addEventListener('DOMContentLoaded', function() {
     const articleContainer = document.createElement('div');
     articleContainer.className = 'article-container';
     
+    // Add encouraging text at the beginning
+    const startEncouragingDiv = document.createElement('div');
+    startEncouragingDiv.className = 'encouraging-text';
+    const startEncouragingP = document.createElement('p');
+    startEncouragingP.textContent = '沙雕图，让生活充满欢乐！每天看一看沙雕图，心情愉快一整天。';
+    startEncouragingDiv.appendChild(startEncouragingP);
+    articleContainer.appendChild(startEncouragingDiv);
+    
     // Build the article content
-    articleContent = '';
+    articleContent = '沙雕图，让生活充满欢乐！每天看一看沙雕图，心情愉快一整天。\n\n';
     let articleHtml = '';
     
     records.forEach((record, index) => {
@@ -63,12 +70,11 @@ document.addEventListener('DOMContentLoaded', function() {
       // Create the text content for this record
       const recordContent = `${formattedIndex}. ${record.description}\n\n[图片${index + 1}]\n\n`;
       articleContent += recordContent;
-      
-      // Create the HTML for this record
+        // Create the HTML for this record
       const articleItem = document.createElement('div');
       articleItem.className = 'article-item';
       
-      const articleDescription = document.createElement('div');
+      const articleDescription = document.createElement('h1');
       articleDescription.className = 'article-description';
       articleDescription.textContent = `${formattedIndex}. ${record.description}`;
       
@@ -81,6 +87,16 @@ document.addEventListener('DOMContentLoaded', function() {
       articleItem.appendChild(articleImage);
       articleContainer.appendChild(articleItem);
     });
+      // Add encouraging text at the end
+    const endEncouragingDiv = document.createElement('div');
+    endEncouragingDiv.className = 'encouraging-text';
+    const endEncouragingP = document.createElement('p');
+    endEncouragingP.textContent = '沙雕图不仅能带给我们欢笑，还能帮助我们减轻压力，放松身心。赶紧收藏并分享这些有趣的沙雕图吧！';
+    endEncouragingDiv.appendChild(endEncouragingP);
+    articleContainer.appendChild(endEncouragingDiv);
+    
+    // Add ending text to article content
+    articleContent += '\n沙雕图不仅能带给我们欢笑，还能帮助我们减轻压力，放松身心。赶紧收藏并分享这些有趣的沙雕图吧！';
     
     // Clear the dynamic content and append the article
     dynamicContent.innerHTML = '';

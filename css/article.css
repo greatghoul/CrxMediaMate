@@ -1,0 +1,132 @@
+/* Styles for the 沙雕图 article page */
+body {
+  font-family: Arial, sans-serif;
+  background-color: #f5f5f5;
+  margin: 0;
+  padding: 0;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.content-container {
+  max-width: 800px;
+  margin: 20px auto;
+  padding: 20px;
+  border-radius: 8px;
+  background-color: #fff;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+h1 {
+  color: #333;
+  margin-bottom: 30px;
+  text-align: center;
+}
+
+.encouraging-text {
+  background-color: #f0f8ff;
+  border-left: 4px solid #4285f4;
+  padding: 15px;
+  margin-bottom: 20px;
+  border-radius: 4px;
+  font-size: 16px;
+  line-height: 1.5;
+  color: #333;
+}
+
+.encouraging-text p {
+  margin: 0;
+}
+
+#dynamicContent {
+  margin-top: 20px;
+  padding: 20px;
+  border-radius: 5px;
+  min-height: 200px;
+  max-height: 75vh;
+  overflow-y: auto;
+  text-align: center;
+  display: flex;
+  justify-content: center;
+}
+
+.article-container {
+  text-align: left;
+  max-height: 70vh;
+  overflow-y: auto;
+  padding-right: 10px;
+  margin: 0 auto;
+  width: 90%;
+  max-width: 600px;
+}
+
+.article-item {
+  margin-bottom: 30px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.article-description {
+  font-size: 1.3em;
+  font-weight: bold;
+  margin-bottom: 15px;
+  text-align: left;
+  width: 100%;
+}
+
+.article-image {
+  max-width: 90%;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  margin-bottom: 10px;
+  display: inline-block;
+}
+
+.loading {
+  text-align: center;
+  font-size: 18px;
+  color: #666;
+  padding: 30px;
+}
+
+.error {
+  color: #d32f2f;
+  text-align: center;
+  font-size: 16px;
+  padding: 20px;
+  border: 1px solid #ffa8a8;
+  background-color: #fff2f2;
+  border-radius: 5px;
+}
+
+.controls {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+/* Button styles from popup.css */
+button {
+  background-color: #4285f4;
+  color: white;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  width: auto !important;
+  max-width: 200px;
+  margin-bottom: 10px;
+}
+
+.secondary-button {
+  background-color: #34a853;
+  color: white;
+  font-weight: bold;
+}
+
+button:hover {
+  background-color: #3367d6;
+}

@@ -18,9 +18,8 @@
     "16": "images/icon.png",
     "48": "images/icon.png",
     "128": "images/icon.png"
-  },
-  "web_accessible_resources": [{
-    "resources": ["newtab.html", "js/newtab.js"],
+  },  "web_accessible_resources": [{
+    "resources": ["newtab.html", "js/newtab.js", "css/article.css"],
     "matches": ["<all_urls>"]
   }]
 }
