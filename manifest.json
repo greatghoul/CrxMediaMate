@@ -3,23 +3,24 @@
   "name": "沙雕图",
   "version": "1.0",
   "description": "收集沙雕图片并添加笔记",
-  "permissions": ["contextMenus", "clipboardWrite", "clipboardRead", "storage"],
+  "permissions": ["contextMenus", "clipboardWrite", "clipboardRead", "storage", "tabs"],
   "host_permissions": ["<all_urls>"],
   "background": {
     "service_worker": "js/background.js",
     "type": "module"
-  },
-  "action": {
-    "default_popup": "popup.html",
+  },  "action": {
     "default_icon": {
       "16": "images/icon.png",
       "48": "images/icon.png",
       "128": "images/icon.png"
     }
-  },
-  "icons": {
+  },"icons": {
     "16": "images/icon.png",
     "48": "images/icon.png",
     "128": "images/icon.png"
-  }
+  },
+  "web_accessible_resources": [{
+    "resources": ["newtab.html", "js/newtab.js"],
+    "matches": ["<all_urls>"]
+  }]
 }

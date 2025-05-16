@@ -11,6 +11,13 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('saveButton').disabled = true;
   }
   
+  // Add event listener for the new tab button
+  document.getElementById('openNewTabButton').addEventListener('click', function() {
+    const message = document.getElementById('note').value.trim() || 'Hello World!';
+    const newTabUrl = chrome.runtime.getURL("newtab.html") + `?message=${encodeURIComponent(message)}`;
+    chrome.tabs.create({ url: newTabUrl });
+  });
+  
   // Form submission handler
   document.getElementById('saveForm').addEventListener('submit', function(event) {
     event.preventDefault();

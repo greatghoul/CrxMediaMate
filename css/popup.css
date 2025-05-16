@@ -49,6 +49,13 @@ button {
   border-radius: 4px;
   cursor: pointer;
   font-size: 14px;
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+.secondary-button {
+  background-color: #34a853;
+  color: white;
   font-weight: bold;
   width: 100%;
 }

@@ -7,6 +7,13 @@ chrome.runtime.onInstalled.addListener(() => {
   });
 });
 
+// Handle extension icon click
+chrome.action.onClicked.addListener((tab) => {
+  // Open a new tab with our newtab.html
+  const newTabUrl = chrome.runtime.getURL("newtab.html");
+  chrome.tabs.create({ url: newTabUrl });
+});
+
 // Handle context menu clicks
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId === "saveImage") {
