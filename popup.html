@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>沙雕图</title>
+  <style>
+    body {
+      width: 380px;
+      height: 580px;
+      padding: 10px;
+      font-family: Arial, sans-serif;
+    }
+    h1 {
+      font-size: 18px;
+      margin-bottom: 15px;
+    }
+    .image-preview {
+      width: 100%;
+      max-height: 250px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-bottom: 15px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .image-preview img {
+      max-width: 100%;
+      max-height: 250px;
+      object-fit: contain;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    textarea {
+      width: 100%;
+      height: 150px;
+      padding: 10px;
+      margin-bottom: 15px;
+      box-sizing: border-box;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      resize: vertical;
+    }
+    button {
+      background-color: #4285f4;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: bold;
+    }
+    button:hover {
+      background-color: #3367d6;
+    }
+    .status-message {
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 4px;
+      display: none;
+    }
+    .success {
+      background-color: #d4edda;
+      color: #155724;
+    }
+    .error {
+      background-color: #f8d7da;
+      color: #721c24;
+    }
+  </style>
+</head>
+<body>
+  <h1>沙雕图收集</h1>
+  
+  <div class="image-preview">
+    <img id="preview" src="" alt="图片预览">
+  </div>
+    <form id="saveForm">
+    <label for="note">笔记:</label>
+    <textarea id="note" placeholder="添加关于这个沙雕图的笔记..."></textarea>
+    
+    <button type="submit" id="saveButton">保存沙雕图</button>
+  </form>
+  
+  <div id="statusMessage" class="status-message"></div>
+  
+  <script src="js/popup.js"></script>
+</body>
+</html>
