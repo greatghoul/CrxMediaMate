@@ -10,86 +10,77 @@ document.addEventListener('DOMContentLoaded', function() {
     previewImg.alt = "没有可用的图片";
     document.getElementById('saveButton').disabled = true;
   }
-  
-  // Add event listener for the new tab button
-  document.getElementById('openNewTabButton').addEventListener('click', function() {
-    const message = document.getElementById('note').value.trim() || 'Hello World!';
-    const newTabUrl = chrome.runtime.getURL("newtab.html") + `?message=${encodeURIComponent(message)}`;
-    chrome.tabs.create({ url: newTabUrl });
-  });
-  
   // Form submission handler
   document.getElementById('saveForm').addEventListener('submit', function(event) {
     event.preventDefault();
     
     const note = document.getElementById('note').value.trim();
     const statusMessage = document.getElementById('statusMessage');
+    const saveButton = document.getElementById('saveButton');
     
-    // Save image and note to clipboard
-    saveToClipboard(imageUrl, note)
-      .then(() => {
-        // Show success message
-        statusMessage.textContent = "沙雕图已保存到剪贴板！";
-        statusMessage.className = "status-message success";
-        statusMessage.style.display = "block";
+    // Disable button during submission
+    saveButton.disabled = true;
+      // Show initial status message and spinner
+    statusMessage.textContent = "上传图片中...";
+    statusMessage.className = "status-message info";
+    statusMessage.style.display = "block";
+    document.getElementById('loadingIndicator').style.display = "flex";
+    
+    // Post to Notion database
+    postToNotion(imageUrl, note, statusMessage)      .then(() => {
+        // Hide spinner
+        document.getElementById('loadingIndicator').style.display = "none";
         
-        // Post to Notion database
-        postToNotion(imageUrl, note)
-          .then(() => {
-            statusMessage.textContent = "沙雕图已保存到剪贴板并发布到Notion！";
-
-            // Close the window after 3 seconds
-            setTimeout(() => {
-              window.close();
-            }, 3000);
-          })
-          .catch(error => {
-            console.error("Notion发布失败:", error);
-            statusMessage.textContent = "已保存到剪贴板，但Notion发布失败";
-          });
-        
-
+        // Show success message with animation
+        statusMessage.style.display = "none"; // Reset for new animation
+        setTimeout(() => {
+          statusMessage.textContent = "沙雕图已发布到Notion！";
+          statusMessage.className = "status-message success";
+          statusMessage.style.display = "block";
+          
+          // Apply a subtle bounce effect to the success message
+          statusMessage.style.animation = "fade-in 0.5s ease-in-out";
+          
+          // Close the window after 3 seconds
+          setTimeout(() => {
+            window.close();
+          }, 3000);
+        }, 100);
       })
       .catch(error => {
+        // Hide spinner
+        document.getElementById('loadingIndicator').style.display = "none";
+        
         // Show error message
-        statusMessage.textContent = "错误: " + error.message;
+        console.error("Notion发布失败:", error);
+        statusMessage.textContent = "发布到Notion失败: " + error.message;
         statusMessage.className = "status-message error";
         statusMessage.style.display = "block";
+        
+        // Re-enable button on error
+        saveButton.disabled = false;
       });
   });
-  
-  // Function to save image and note to clipboard
-  async function saveToClipboard(imageUrl, note) {
-    try {
-      // Create a combined data structure with both image URL and note
-      const clipboardData = {
-        imageUrl: imageUrl,
-        note: note
-      };
-      
-      // Convert to a string for clipboard
-      const clipboardText = JSON.stringify(clipboardData);
-      
-      // Write to clipboard
-      await navigator.clipboard.writeText(clipboardText);
-      
-      // Optionally, you can also try to copy the image itself to clipboard
-      // This is more complex and might require additional permissions
-      // For now, we're just writing the text data
-      
-      return Promise.resolve();
-    } catch (error) {
-      return Promise.reject(error);
-    }
-  }
-  
   // Function to post to Notion database
-  async function postToNotion(imageUrl, note) {
+  async function postToNotion(imageUrl, note, statusMessage) {
     const NOTION_DATABASE_ID = "1f55931b1ae380af993eeac13b7bed02";
     
     try {
-      // We'll need to use background.js as a proxy to make the Notion API call
+      // Update status to show progress
+      statusMessage.textContent = "上传图片中...";
+        // We'll need to use background.js as a proxy to make the Notion API call
       // because of CORS restrictions in popup.js
+      
+      // Set up a message listener for progress updates
+      const messageListener = (message) => {
+        if (message && message.progress) {
+          statusMessage.textContent = message.progress;
+        }
+      };
+      
+      // Add the listener for progress updates
+      chrome.runtime.onMessage.addListener(messageListener);
+      
       return new Promise((resolve, reject) => {
         chrome.runtime.sendMessage({
           action: "postToNotion",
@@ -99,10 +90,13 @@ document.addEventListener('DOMContentLoaded', function() {
             note: note
           }
         }, response => {
-          if (response.success) {
+          // Remove the message listener when we're done
+          chrome.runtime.onMessage.removeListener(messageListener);
+          
+          if (response && response.success) {
             resolve();
           } else {
-            reject(new Error(response.error || "Failed to post to Notion"));
+            reject(new Error(response && response.error || "Failed to post to Notion"));
           }
         });
       });
