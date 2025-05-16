@@ -4,6 +4,7 @@
   "version": "1.0",
   "description": "收集沙雕图片并添加笔记",
   "permissions": ["contextMenus", "clipboardWrite", "clipboardRead", "storage"],
+  "host_permissions": ["<all_urls>"],
   "background": {
     "service_worker": "js/background.js"
   },

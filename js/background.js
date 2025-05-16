@@ -17,7 +17,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
     chrome.windows.create({
       url: `popup.html?imageUrl=${encodeURIComponent(imageUrl)}`,
       type: "popup",
-      width: 400,
+      width: 500,
       height: 600
     });
   }
