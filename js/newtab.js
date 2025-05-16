@@ -50,14 +50,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // Create the article container
     const articleContainer = document.createElement('div');
     articleContainer.className = 'article-container';
-    
-    // Add encouraging text at the beginning
-    const startEncouragingDiv = document.createElement('div');
-    startEncouragingDiv.className = 'encouraging-text';
+      // Add encouraging text at the beginning as regular paragraph
     const startEncouragingP = document.createElement('p');
     startEncouragingP.textContent = '沙雕图，让生活充满欢乐！每天看一看沙雕图，心情愉快一整天。';
-    startEncouragingDiv.appendChild(startEncouragingP);
-    articleContainer.appendChild(startEncouragingDiv);
+    startEncouragingP.style.marginBottom = '20px';
+    articleContainer.appendChild(startEncouragingP);
     
     // Build the article content
     articleContent = '沙雕图，让生活充满欢乐！每天看一看沙雕图，心情愉快一整天。\n\n';
@@ -86,14 +83,11 @@ document.addEventListener('DOMContentLoaded', function() {
       articleItem.appendChild(articleDescription);
       articleItem.appendChild(articleImage);
       articleContainer.appendChild(articleItem);
-    });
-      // Add encouraging text at the end
-    const endEncouragingDiv = document.createElement('div');
-    endEncouragingDiv.className = 'encouraging-text';
+    });    // Add encouraging text at the end as regular paragraph
     const endEncouragingP = document.createElement('p');
     endEncouragingP.textContent = '沙雕图不仅能带给我们欢笑，还能帮助我们减轻压力，放松身心。赶紧收藏并分享这些有趣的沙雕图吧！';
-    endEncouragingDiv.appendChild(endEncouragingP);
-    articleContainer.appendChild(endEncouragingDiv);
+    endEncouragingP.style.marginTop = '20px';
+    articleContainer.appendChild(endEncouragingP);
     
     // Add ending text to article content
     articleContent += '\n沙雕图不仅能带给我们欢笑，还能帮助我们减轻压力，放松身心。赶紧收藏并分享这些有趣的沙雕图吧！';
@@ -114,28 +108,28 @@ document.addEventListener('DOMContentLoaded', function() {
         clearInterval(fadeIn);
       }
     }, 50);
-  };
-  
-  // Copy article content to clipboard
-  const copyArticleToClipboard = () => {
-    if (!articleContent) {
-      alert('没有可复制的内容');
+  };  // Select all article content for copying
+  const selectAllArticleContent = () => {
+    const articleContainer = document.querySelector('.article-container');
+    
+    if (!articleContainer) {
       return;
     }
     
-    navigator.clipboard.writeText(articleContent)
-      .then(() => {
-        alert('文章内容已复制到剪贴板');
-      })
-      .catch((error) => {
-        console.error('复制失败:', error);
-        alert('复制失败，请手动复制');
-      });
+    // Create a selection range
+    const selection = window.getSelection();
+    const range = document.createRange();
+    
+    // Select the article container
+    range.selectNodeContents(articleContainer);
+    selection.removeAllRanges();
+    selection.addRange(range);
+    
   };
   
   // Add event listeners
   refreshButton.addEventListener('click', fetchNotionRecords);
-  copyButton.addEventListener('click', copyArticleToClipboard);
+  copyButton.addEventListener('click', selectAllArticleContent);
   
   // Initial fetch
   fetchNotionRecords();

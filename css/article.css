@@ -1,6 +1,7 @@
 /* Styles for the 沙雕图 article page */
 body {
   font-family: Arial, sans-serif;
+  font-size: 14px;
   background-color: #f5f5f5;
   margin: 0;
   padding: 0;
@@ -23,21 +24,6 @@ h1 {
   text-align: center;
 }
 
-.encouraging-text {
-  background-color: #f0f8ff;
-  border-left: 4px solid #4285f4;
-  padding: 15px;
-  margin-bottom: 20px;
-  border-radius: 4px;
-  font-size: 16px;
-  line-height: 1.5;
-  color: #333;
-}
-
-.encouraging-text p {
-  margin: 0;
-}
-
 #dynamicContent {
   margin-top: 20px;
   padding: 20px;
@@ -58,6 +44,11 @@ h1 {
   margin: 0 auto;
   width: 90%;
   max-width: 600px;
+  user-select: text;
+}
+
+::selection {
+  background-color: rgba(66, 133, 244, 0.3);
 }
 
 .article-item {
