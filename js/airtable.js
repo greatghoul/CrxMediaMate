@@ -31,6 +31,18 @@ class Airtable {
     return data.id;
   }
 
+  async finishRecords(recordIds) {
+    const records = recordIds.map(id => ({ id, fields: { status: 'published' } }));
+    const res = await fetch(`${baseUrl}/Records`, {
+      method: 'PATCH',
+      headers: headers,
+      body: JSON.stringify({ records })
+    });
+    if (!res.ok) throw new Error('Failed to finish records');
+    const data = await res.json();
+    return data;
+  }
+
   async uploadImage({ recordId, image }) {
     const res = await fetch(`${contentUrl}/${recordId}/image/uploadAttachment`, {
       method: 'POST',

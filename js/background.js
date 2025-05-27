@@ -36,18 +36,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     createRecord(request.data, sendResponse)    
   } else if (request.action === "queryRecords") {
     queryRecords(sendResponse);
-  } else if (request.action === "markPagesAsPublished") {
-    updateNotionPagesStatus(request.pageIds)
-      .then(() => {
-        sendResponse({ success: true });
-      })
-      .catch(error => {
-        console.error("Error updating Notion page status:", error);
-        sendResponse({ success: false, error: error.message });
-      });
-    
-    // Return true to indicate we'll respond asynchronously
-    return true;
+  } else if (request.action === "finishRecords") {
+    finishRecords(request.recordIds, sendResponse)    
   }
 
    return true;
@@ -99,102 +89,17 @@ async function createRecord(data, sendResponse) {
   }
 }
 
-// Function to query records from Airtable
-async function queryNotionRecords() {
-  return new Promise(async (resolve, reject) => {
-    if (!airtableToken) {
-      reject(new Error("Airtable API token not found. Please check your settings.js file."));
-      return;
-    }
-    
-    try {
-      // Query the database for records with status "待发布"
-      const response = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_TABLE_NAME}?filterByFormula=AND({状态}='待发布')&sort[0][field]=createdTime&sort[0][direction]=asc`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${airtableToken}`,
-          'Content-Type': 'application/json'
-        }
-      });
-        if (!response.ok) {
-        const errorData = await response.json();
-        reject(new Error(`Airtable API error: ${JSON.stringify(errorData)}`));
-        return;
-      }
-      
-      const data = await response.json();
-      
-      // Extract the relevant info from each record
-      const records = data.records.map((record) => {
-        console.log(record);
-        // Extract the description
-        const description = record.fields["描述"] || "无描述";
-        
-        // Extract the image URL
-        const imageUrl = record.fields["图片"]?.[0]?.url || null;
-        
-        return {
-          id: record.id,
-          description,
-          imageUrl
-        };
-      });
-      
-      console.log(`Successfully fetched ${records.length} records from Notion`);
-      resolve(records);
-      
-    } catch (error) {
-      console.error("Error querying Notion:", error);
-      reject(error);
-    }
-  });
-}
-
 // Function to update Airtable record status to "已发布"
-async function updateNotionPagesStatus(recordIds) {
-  return new Promise(async (resolve, reject) => {
-    if (!airtableToken) {
-      reject(new Error("Airtable API token not found. Please check your settings.js file."));
-      return;
+async function finishRecords(recordIds, sendResponse) {
+  try {
+    if (!Array.isArray(recordIds) || recordIds.length === 0) {
+      throw new Error("No record IDs provided");
     }
     
-    if (!recordIds || !recordIds.length) {
-      reject(new Error("No record IDs provided"));
-      return;
-    }
-    
-    try {
-      // Process all record updates concurrently
-      const updatePromises = recordIds.map(async (recordId) => {
-        const response = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_TABLE_NAME}/${recordId}`, {
-          method: 'PATCH',
-          headers: {
-            'Authorization': `Bearer ${airtableToken}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            fields: {
-              "状态": "已发布"
-            }
-          })
-        });
-          if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(`Failed to update record ${recordId}: ${JSON.stringify(errorData)}`);
-        }
-        
-        return await response.json();
-      });
-      
-      // Wait for all updates to complete
-      await Promise.all(updatePromises);
-      
-      console.log(`Successfully updated ${recordIds.length} records to "已发布" status`);
-      resolve();
-      
-    } catch (error) {
-      console.error("Error updating Notion pages:", error);
-      reject(error);
-    }
-  });
+    await airtable.finishRecords(recordIds);
+    sendResponse({ success: true });
+  } catch (e) {
+    console.error('Error finishing records:', e);
+    sendResponse({ success: false, error: e.message });
+  }
 }

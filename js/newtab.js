@@ -26,7 +26,6 @@ const queryRecords = async () => {
     
     // Store the records
     records = response.records;
-    console.log(records);
     
     // Generate article content
     generateArticle(records);
@@ -138,16 +137,13 @@ const markPagesAsPublished = async () => {
     // Disable button and show loading status
     publishedButton.disabled = true;
     publishedButton.textContent = "正在更新...";
-    
-    // Get all page IDs from the current records
-    const pageIds = records.map(record => record.id);
-    
+        
     // Send a message to background.js to update the Notion pages
     const response = await new Promise((resolve) => {
       chrome.runtime.sendMessage(
         { 
-          action: "markPagesAsPublished",
-          pageIds: pageIds
+          action: "finishRecords",
+          recordIds: records.map(record => record.id)
         },
         (response) => resolve(response)
       );
@@ -158,7 +154,7 @@ const markPagesAsPublished = async () => {
     }
     
     // Refresh the content after successful update
-    fetchPendingRecords();
+    queryRecords();
     
   } catch (error) {
     console.error("Error marking pages as published:", error);
