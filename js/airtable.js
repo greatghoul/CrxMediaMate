@@ -13,11 +13,7 @@ class Airtable {
   }
 
   async listRecords() {
-    const params = new URLSearchParams({
-      filterByFormula: "status='pending'",
-      sort: '[{"field":"created_at","direction":"desc"}]'
-    });
-    const res = await fetch(`${baseUrl}?${params.toString()}`, { headers });
+    const res = await fetch(`${baseUrl}/Records??maxRecords=5&view=Pending`, { headers });
     if (!res.ok) throw new Error('Failed to list records');
     const data = await res.json();
     return data.records;

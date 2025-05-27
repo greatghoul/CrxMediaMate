@@ -34,18 +34,8 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "createRecord") {
     createRecord(request.data, sendResponse)    
-  } else if (request.action === "queryNotionRecords") {
-    queryNotionRecords()
-      .then((records) => {
-        sendResponse({ success: true, records });
-      })
-      .catch(error => {
-        console.error("Error querying Notion records:", error);
-        sendResponse({ success: false, error: error.message });
-      });
-    
-    // Return true to indicate we'll respond asynchronously
-    return true;
+  } else if (request.action === "queryRecords") {
+    queryRecords(sendResponse);
   } else if (request.action === "markPagesAsPublished") {
     updateNotionPagesStatus(request.pageIds)
       .then(() => {
@@ -64,9 +54,15 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 });
 
 
-// Constants for Airtable
-const AIRTABLE_BASE_ID = 'appxx1QIHNufkOxkL';
-const AIRTABLE_TABLE_NAME = 'tbljImXslA8PuWPxQ';
+async function queryRecords(sendResponse) {
+  try {
+    const records = await airtable.listRecords();
+    sendResponse({ success: true, records });
+  } catch (error) {
+    console.error("Error querying records:", error);
+    sendResponse({ success: false, error: error.message });
+  }
+}
 
 async function blobToBase64(blob) {
   return new Promise((resolve, reject) => {
