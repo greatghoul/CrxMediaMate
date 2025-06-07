@@ -13,7 +13,7 @@ class Airtable {
   }
 
   async listRecords() {
-    const res = await fetch(`${baseUrl}/Records??maxRecords=5&view=Pending`, { headers });
+    const res = await fetch(`${baseUrl}/Records??maxRecords=10&view=Pending`, { headers });
     if (!res.ok) throw new Error('Failed to list records');
     const data = await res.json();
     return data.records;
