@@ -55,13 +55,18 @@ const generateArticle = (records) => {
     articleDescription.className = 'article-description';
     articleDescription.textContent = `${formattedIndex}. ${record.fields.note}`;
 
-    const articleImage = document.createElement('img');
-    articleImage.className = 'article-image';
-    articleImage.src = record.fields.image[0].url;
-    articleImage.alt = record.fields.note;
-
     articleItem.appendChild(articleDescription);
-    articleItem.appendChild(articleImage);
+
+    if (Array.isArray(record.fields.image)) {
+      record.fields.image.forEach((img) => {
+        const articleImage = document.createElement('img');
+        articleImage.className = 'article-image';
+        articleImage.src = img.url;
+        articleImage.alt = record.fields.note;
+        articleItem.appendChild(articleImage);
+      });
+    }
+
     articleContainer.appendChild(articleItem);
   });
 
