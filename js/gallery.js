@@ -73,9 +73,25 @@ const ImageCard = ({ image, selected, onSelect, onEdit }) => {
     e.stopPropagation();
     onEdit(image.id);
   };
-
   // 将 Blob 数据转换为 URL
   const imageUrl = URL.createObjectURL(image.imageData);
+  
+  // 检查图片创建日期是否为今天
+  const isToday = () => {
+    const today = new Date();
+    const createdDate = new Date(image.createdAt);
+    return (
+      createdDate.getDate() === today.getDate() &&
+      createdDate.getMonth() === today.getMonth() &&
+      createdDate.getFullYear() === today.getFullYear()
+    );
+  };
+  
+  // 格式化日期显示
+  const formatDate = () => {
+    const date = new Date(image.createdAt);
+    return date.toLocaleDateString();
+  };
   
   return html`
     <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6 col-xs-12 mb-4">
@@ -103,8 +119,8 @@ const ImageCard = ({ image, selected, onSelect, onEdit }) => {
                 </svg>
               </span>
             </div>
-            <small class="text-muted">
-              ${new Date(image.createdAt).toLocaleDateString()}
+            <small class=${isToday() ? "text-success fw-bold" : "text-muted"}>
+              ${isToday() ? '今天' : formatDate()}
             </small>
           </div>
         </div>
