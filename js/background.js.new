@@ -1,18 +1,16 @@
-// import { airbnbClient } from './airbnb.js';
+import { airbnbClient } from './airbnb.js';
 
 // 导入 IndexedDB 服务
 import { IndexedDBService } from './indexedDBService.js';
 
 // Initialize context menu
 chrome.runtime.onInstalled.addListener(() => {
-  // 图片右键菜单
   chrome.contextMenus.create({
     id: "saveImage",
     title: "保存沙雕图",
     contexts: ["image"]
   });
   
-  // 扩展图标右键菜单
   chrome.contextMenus.create({
     id: "openGallery",
     title: "打开图片库",
@@ -20,18 +18,11 @@ chrome.runtime.onInstalled.addListener(() => {
   });
 });
 
-// 创建右键菜单
-chrome.contextMenus.create({
-  id: "galleryMenuItem",
-  title: "打开图片库",
-  contexts: ["page"]
-});
-
-// 处理点击扩展图标事件
+// Handle extension icon click
 chrome.action.onClicked.addListener((tab) => {
-  // 在新标签页中打开图片库
-  const galleryUrl = chrome.runtime.getURL("gallery.html");
-  chrome.tabs.create({ url: galleryUrl });
+  // Open a new tab with our newtab.html
+  const newTabUrl = chrome.runtime.getURL("newtab.html");
+  chrome.tabs.create({ url: newTabUrl });
 });
 
 // Handle context menu clicks
@@ -44,7 +35,8 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
       type: "popup",
       width: 500,
       height: 600
-    });  } else if (info.menuItemId === "openGallery" || info.menuItemId === "galleryMenuItem") {
+    });
+  } else if (info.menuItemId === "openGallery") {
     // Open gallery page in a new tab
     const galleryUrl = chrome.runtime.getURL("gallery.html");
     chrome.tabs.create({ url: galleryUrl });
@@ -168,12 +160,12 @@ async function saveImageToIndexedDB(data) {
 
 async function queryRecords() {
   try {
-    // const records = await airbnbClient.listRecords();
-    // return records.map(record => ({
-    //   id: record.id,
-    //   description: record.fields.描述,
-    //   imageUrl: record.fields.图片?.[0]?.url
-    // }));
+    const records = await airbnbClient.listRecords();
+    return records.map(record => ({
+      id: record.id,
+      description: record.fields.描述,
+      imageUrl: record.fields.图片?.[0]?.url
+    }));
   } catch (error) {
     console.error("Error querying records:", error);
     throw error;

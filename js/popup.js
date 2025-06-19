@@ -24,7 +24,6 @@ function createRecord() {
     showMessage("请填写备注信息", "error");
     return;
   }
-
   // Disable button during submission
   saveButton.disabled = true;
   // Show initial status message
@@ -34,9 +33,9 @@ function createRecord() {
     data: { note, imageUrl }
   }, response => {
     if (response && response.success) {
-      // Successfully created record, now post to Notion
-      showMessage('记录已保存', 'success');
-      setTimeout(() => window.close(), 1000);
+      // Successfully created record in Airtable and local IndexedDB
+      showMessage('沙雕图已保存', 'success');
+      setTimeout(() => window.close(), 1500);
     } else {
       // Show error message
       console.error("创建记录失败:", response.error);
