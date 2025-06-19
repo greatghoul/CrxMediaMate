@@ -21,17 +21,24 @@ chrome.action.onClicked.addListener((tab) => {
 // Handle context menu clicks
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId === "saveImage") {
-    // Open popup with the selected image
+    // Open popup with the selected image, centered on the screen
     const popupUrl = chrome.runtime.getURL("popup.html") + `?imageUrl=${encodeURIComponent(info.srcUrl)}`;
-    chrome.windows.create({
-      url: popupUrl,
-      type: "popup",
-      width: 500,
-      height: 600
-    });  } else if (info.menuItemId === "openGallery" || info.menuItemId === "galleryMenuItem") {
-    // Open gallery page in a new tab
-    const galleryUrl = chrome.runtime.getURL("gallery.html");
-    chrome.tabs.create({ url: galleryUrl });
+    // Get the current screen's width and height to center the popup
+    chrome.windows.getCurrent({}, (currentWindow) => {
+      const width = 500;
+      const height = 600;
+      // 计算当前窗口中央位置
+      const left = Math.round(currentWindow.left + (currentWindow.width - width) / 2);
+      const top = Math.round(currentWindow.top + (currentWindow.height - height) / 2);
+      chrome.windows.create({
+        url: popupUrl,
+        type: "popup",
+        width,
+        height,
+        left,
+        top
+      });
+    });
   }
 });
 
