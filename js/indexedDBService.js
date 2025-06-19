@@ -1,8 +1,14 @@
 // IndexedDB 服务模块 - 处理图片数据的增删改查
 
 const DB_NAME = 'shadiaoPicsDB';
-const DB_VERSION = 1;
+const DB_VERSION = 2; // 升级版本号触发数据库升级
 const STORE_NAME = 'pictures';
+
+// 图片状态枚举
+const ImageState = {
+  PENDING: 'pending',
+  PUBLISHED: 'published'
+};
 
 // 生成唯一ID
 const generateId = () => {
@@ -13,20 +19,42 @@ const generateId = () => {
 const openDB = () => {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
-    
-    request.onupgradeneeded = (event) => {
+      request.onupgradeneeded = (event) => {
       const db = event.target.result;
+      const oldVersion = event.oldVersion;
+      
       if (!db.objectStoreNames.contains(STORE_NAME)) {
+        // 创建新的存储对象
         const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
-        store.createIndex('published', 'published', { unique: false });
+        store.createIndex('state', 'state', { unique: false }); // 新的状态索引
         store.createIndex('createdAt', 'createdAt', { unique: false });
         store.createIndex('publishedAt', 'publishedAt', { unique: false });
+      } else if (oldVersion < 2) {
+        // 版本 1 升级到版本 2: 添加 state 索引并删除旧的 published 索引
+        const transaction = event.target.transaction;
+        const store = transaction.objectStore(STORE_NAME);
+        
+        // 如果有旧的 published 索引，删除它
+        if (store.indexNames.contains('published')) {
+          store.deleteIndex('published');
+        }
+        
+        // 创建新的 state 索引
+        if (!store.indexNames.contains('state')) {
+          store.createIndex('state', 'state', { unique: false });
+        }
       }
     };
     
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
   });
+};
+
+// 初始化数据库
+const initDB = async () => {
+  await openDB();
+  return true;
 };
 
 // 获取所有图片
@@ -39,12 +67,19 @@ const getAllImages = async (filter = {}) => {
     
     request.onsuccess = () => {
       let results = request.result;
-      
-      // 应用过滤条件
-      if (filter.published === true) {
-        results = results.filter(img => img.published === true);
-      } else if (filter.published === false) {
-        results = results.filter(img => img.published !== true);
+        // 应用过滤条件
+      if (filter.published === true || filter.state === ImageState.PUBLISHED) {
+        // 优先使用 state 字段，兼容旧的 published 字段
+        results = results.filter(img => 
+          img.state === ImageState.PUBLISHED || 
+          (img.state === undefined && img.published === true)
+        );
+      } else if (filter.published === false || filter.state === ImageState.PENDING) {
+        // 优先使用 state 字段，兼容旧的 published 字段
+        results = results.filter(img => 
+          img.state === ImageState.PENDING || 
+          (img.state === undefined && img.published !== true)
+        );
       }
       
       // 应用搜索条件
@@ -89,14 +124,17 @@ const addImage = async (imageData, caption, published = false) => {
     const store = transaction.objectStore(STORE_NAME);
     
     const now = new Date();
+    const state = published ? ImageState.PUBLISHED : ImageState.PENDING;
+    
     const newImage = {
       id: generateId(),
       imageData,
       caption,
-      published,
+      state,                // 使用新的 state 枚举
+      published,            // 保持兼容性
       createdAt: now,
       updatedAt: now,
-      publishedAt: published ? now : null
+      publishedAt: state === ImageState.PUBLISHED ? now : null
     };
     
     const request = store.add(newImage);
@@ -122,6 +160,10 @@ const updateImage = async (id, updates) => {
         reject(new Error('Image not found'));
         return;
       }
+        // 处理状态变更
+      if ('published' in updates) {
+        updates.state = updates.published ? ImageState.PUBLISHED : ImageState.PENDING;
+      }
       
       // 合并更新
       const updatedImage = {
@@ -131,7 +173,8 @@ const updateImage = async (id, updates) => {
       };
       
       // 如果发布状态改变了，更新publishedAt
-      if (updates.published === true && !image.published) {
+      if ((updates.published === true && !image.published) || 
+          (updates.state === ImageState.PUBLISHED && image.state !== ImageState.PUBLISHED)) {
         updatedImage.publishedAt = new Date();
       }
       
@@ -202,16 +245,71 @@ const queryImages = async (criteria = {}) => {
   return getAllImages(criteria);
 };
 
+// 获取未发布图片的数量
+const getUnpublishedCount = async () => {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction([STORE_NAME], 'readonly');
+    const store = transaction.objectStore(STORE_NAME);
+    
+    try {
+      // 尝试使用新的 state 索引
+      if (store.indexNames.contains('state')) {
+        const index = store.index('state');
+        const request = index.count(ImageState.PENDING);
+        
+        request.onsuccess = () => {
+          resolve(request.result);
+        };
+        
+        request.onerror = () => reject(request.error);
+      } else {
+        // 兼容旧版本：获取所有记录然后过滤
+        const request = store.getAll();
+        
+        request.onsuccess = () => {
+          const results = request.result;
+          const pendingCount = results.filter(img => 
+            img.state === ImageState.PENDING || 
+            (img.state === undefined && img.published !== true)
+          ).length;
+          resolve(pendingCount);
+        };
+        
+        request.onerror = () => reject(request.error);
+      }
+    } catch (error) {
+      console.error('获取待处理图片数量出错:', error);
+      // 出错时回退到安全方法
+      const request = store.getAll();
+      
+      request.onsuccess = () => {
+        const results = request.result;
+        const pendingCount = results.filter(img => 
+          img.state === ImageState.PENDING || 
+          (img.state === undefined && img.published !== true)
+        ).length;
+        resolve(pendingCount);
+      };
+      
+      request.onerror = () => reject(request.error);
+    }
+  });
+};
+
 // 导出所有方法
 export const IndexedDBService = {
+  ImageState,  // 导出状态枚举
   openDB,
+  initDB,      // 导出初始化函数
   getAllImages,
   getImage,
   addImage,
   updateImage,
   deleteImage,
   bulkDelete,
-  queryImages
+  queryImages,
+  getUnpublishedCount,
 };
 
 export default IndexedDBService;
