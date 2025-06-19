@@ -176,10 +176,26 @@ body {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  align-items: center;
 }
 
 .bulk-actions button {
   white-space: nowrap;
+}
+
+.bulk-actions .btn-group {
+  margin-right: 4px;
+}
+
+.bulk-actions .btn-outline-secondary {
+  padding: 4px 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bulk-actions .btn-outline-secondary i {
+  font-size: 16px;
 }
 
 /* 模态框样式 */
@@ -313,4 +329,64 @@ body {
 .article-container p {
   margin: 20px 0;
   line-height: 1.6;
+}
+
+/* 选择控制样式 */
+.selection-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 15px;
+  padding: 10px;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  border: 1px solid #eaeaea;
+}
+
+.btn-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: transparent;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  padding: 6px 12px;
+  cursor: pointer;
+  color: #495057;
+  transition: all 0.2s ease;
+}
+
+.btn-icon:hover:not(:disabled) {
+  background-color: #e9ecef;
+}
+
+.btn-icon:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.btn-icon span {
+  font-size: 14px;
+}
+
+.selection-info {
+  margin-left: auto;
+  font-size: 14px;
+  color: #6c757d;
+  font-weight: 500;
+}
+
+.select-all:hover:not(:disabled) {
+  color: #28a745;
+  border-color: #28a745;
+}
+
+.deselect-all:hover:not(:disabled) {
+  color: #dc3545;
+  border-color: #dc3545;
 }
