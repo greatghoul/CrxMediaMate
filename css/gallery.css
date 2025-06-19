@@ -18,12 +18,19 @@ body {
   border-radius: 6px;
   overflow: hidden;
   box-shadow: 0 2px 5px rgba(0,0,0,0.15);
-  transition: transform 0.2s ease;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: 3px solid transparent;
 }
 
 .image-card:hover {
   transform: translateY(-5px);
   box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+.image-card.selected {
+  border: 3px solid #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
 }
 
 .image-card .card-img-container {
@@ -79,18 +86,43 @@ body {
   color: #212529;
 }
 
-.card-checkbox {
+.card-selected-icon {
   position: absolute;
   top: 10px;
   left: 10px;
   z-index: 10;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: #007bff;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s ease;
 }
 
-.card-checkbox .form-check-input {
-  width: 20px;
-  height: 20px;
-  background-color: rgba(255, 255, 255, 0.7);
-  border: 1px solid rgba(0, 0, 0, 0.3);
+.image-card.selected .card-selected-icon {
+  opacity: 1;
+}
+
+.edit-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: #e9ecef;
+  color: #495057;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.edit-icon:hover {
+  background-color: #007bff;
+  color: white;
 }
 
 /* 工具栏样式 */
