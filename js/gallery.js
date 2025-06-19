@@ -6,42 +6,47 @@ import { IndexedDBService } from './indexedDBService.js';
 // 工具栏组件
 const Toolbar = ({ onAdd, onFilter, onSearch, selectedCount, onDeleteSelected }) => {
   return html`
-    <div class="toolbar">
-      <div class="row">
-        <div class="col-md-6">
-          <div class="bulk-actions">
-            <button 
-              class="btn btn-primary" 
-              onClick=${onAdd}
-            >
-              <i class="bi bi-plus"></i> 添加图片
-            </button>
-            <button 
-              class="btn btn-danger" 
-              disabled=${selectedCount === 0}
-              onClick=${onDeleteSelected}
-            >
-              删除选中 (${selectedCount})
-            </button>
+    <div class="toolbar fixed-top">
+      <div class="container">
+        <div class="row align-items-center">
+          <div class="col-md-3">
+            <h4 class="mb-0">沙雕图 - 图片库</h4>
           </div>
-        </div>
-        <div class="col-md-6">
-          <div class="d-flex justify-content-end">
-            <div class="input-group" style="max-width: 300px;">
-              <input 
-                type="text" 
-                class="form-control" 
-                placeholder="搜索描述..." 
-                onChange=${e => onSearch(e.target.value)}
-              />
-              <select 
-                class="form-select" 
-                onChange=${e => onFilter(e.target.value)}
+          <div class="col-md-4">
+            <div class="bulk-actions">
+              <button 
+                class="btn btn-primary" 
+                onClick=${onAdd}
               >
-                <option value="all">全部图片</option>
-                <option value="published">已发布</option>
-                <option value="unpublished">未发布</option>
-              </select>
+                <i class="bi bi-plus"></i> 添加图片
+              </button>
+              <button 
+                class="btn btn-danger" 
+                disabled=${selectedCount === 0}
+                onClick=${onDeleteSelected}
+              >
+                删除选中 (${selectedCount})
+              </button>
+            </div>
+          </div>
+          <div class="col-md-5">
+            <div class="d-flex justify-content-end">
+              <div class="input-group" style="max-width: 300px;">
+                <input 
+                  type="text" 
+                  class="form-control" 
+                  placeholder="搜索描述..." 
+                  onChange=${e => onSearch(e.target.value)}
+                />
+                <select 
+                  class="form-select" 
+                  onChange=${e => onFilter(e.target.value)}
+                >
+                  <option value="all">全部图片</option>
+                  <option value="published">已发布</option>
+                  <option value="unpublished">未发布</option>
+                </select>
+              </div>
             </div>
           </div>
         </div>
@@ -66,7 +71,7 @@ const ImageCard = ({ image, selected, onSelect, onEdit }) => {
   const imageUrl = URL.createObjectURL(image.imageData);
   
   return html`
-    <div class="col-md-3 col-sm-6 mb-4">
+    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6 col-xs-12 mb-4">
       <div class=${`image-card ${selected ? 'selected' : ''}`} onClick=${handleCardClick}>
         ${selected && html`
           <div class="card-selected-icon">
@@ -124,7 +129,7 @@ const ImageGrid = ({ images, selectedImages, onSelect, onEdit, loading }) => {
   }
   
   return html`
-    <div class="row">
+    <div class="row image-grid">
       ${images.map(image => html`
         <${ImageCard} 
           key=${image.id}
@@ -479,15 +484,9 @@ function App() {
     setSearchTerm(term);
     clearSelection();
   };
-  
-  // 渲染组件
+    // 渲染组件
   return html`
-    <div class="container">
-      <header class="page-header">
-        <h1>沙雕图 - 图片库</h1>
-        <p class="text-muted">管理你收集的沙雕图片</p>
-      </header>
-      
+    <div class="gallery-container">
       <${Toolbar}
         onAdd=${() => { setCurrentImage(null); setModalOpen(true); }}
         onFilter=${handleFilterChange}
@@ -496,14 +495,15 @@ function App() {
         onDeleteSelected=${() => setDeleteModalOpen(true)}
       />
       
-      <${ImageGrid}
-        images=${images}
-        selectedImages=${selectedImages}
-        onSelect=${handleImageSelect}
-        onEdit=${handleEdit}
-        loading=${loading}
-      />
-      
+      <div class="container content-container">
+        <${ImageGrid}
+          images=${images}
+          selectedImages=${selectedImages}
+          onSelect=${handleImageSelect}
+          onEdit=${handleEdit}
+          loading=${loading}
+        />
+      </div>
       <${ImageModal}
         isOpen=${isModalOpen}
         image=${currentImage}
