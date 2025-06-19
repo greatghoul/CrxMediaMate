@@ -1,31 +1,15 @@
-// import { airbnbClient } from './airbnb.js';
-
 // 导入 IndexedDB 服务
 import { IndexedDBService } from './indexedDBService.js';
 
 // Initialize context menu
 chrome.runtime.onInstalled.addListener(() => {
-  // 图片右键菜单
   chrome.contextMenus.create({
     id: "saveImage",
     title: "保存沙雕图",
     contexts: ["image"]
   });
-  
-  // 扩展图标右键菜单
-  chrome.contextMenus.create({
-    id: "openGallery",
-    title: "打开图片库",
-    contexts: ["action"]
-  });
 });
 
-// 创建右键菜单
-chrome.contextMenus.create({
-  id: "galleryMenuItem",
-  title: "打开图片库",
-  contexts: ["page"]
-});
 
 // 处理点击扩展图标事件
 chrome.action.onClicked.addListener((tab) => {
@@ -53,48 +37,8 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 
 // Handle messages from popup.js
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.action === "createRecord") {
-    // 同时保存到 Airtable 和本地 IndexedDB
-    createRecordAndSaveLocally(request.data, (progress) => {
-      // 发送进度更新
-      if (sender && sender.tab) {
-        chrome.tabs.sendMessage(sender.tab.id, { progress });
-      } else {
-        chrome.runtime.sendMessage({ progress });
-      }
-    })
-      .then((result) => {
-        sendResponse({ success: true, result });
-      })
-      .catch((error) => {
-        console.error("Error creating record:", error);
-        sendResponse({ success: false, error: error.message });
-      });
-    
-    return true;
-  } else if (request.action === "queryRecords") {
-    queryRecords()
-      .then((records) => {
-        sendResponse({ success: true, records });
-      })
-      .catch((error) => {
-        console.error("Error querying records:", error);
-        sendResponse({ success: false, error: error.message });
-      });
-    
-    return true;
-  } else if (request.action === "finishRecords") {
-    finishRecords(request.recordIds)
-      .then(() => {
-        sendResponse({ success: true });
-      })
-      .catch((error) => {
-        console.error("Error finishing records:", error);
-        sendResponse({ success: false, error: error.message });
-      });
-    
-    return true;
-  } else if (request.action === "saveToGallery") {
+  if (request.action === "saveToGallery") {
+    console.log("Received request to save image:", request.data);
     // 直接保存到本地 IndexedDB
     saveImageToIndexedDB(request.data)
       .then(() => {
@@ -109,32 +53,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 });
 
-// 同时保存到 Airtable 和 IndexedDB
-async function createRecordAndSaveLocally(data, progressCallback) {
-  try {
-    // 首先下载图片
-    progressCallback("下载图片中...");
-    const imageResponse = await fetch(data.imageUrl);
-    const imageBlob = await imageResponse.blob();
-    
-    // 保存到 Airtable
-    progressCallback("保存到 Airtable...");
-    const airtableResult = await createRecord(data, imageBlob, progressCallback);
-    
-    // 保存到 IndexedDB
-    progressCallback("保存到本地图库...");
-    await saveImageToIndexedDB({
-      imageUrl: data.imageUrl,
-      note: data.note,
-      blob: imageBlob
-    });
-    
-    return airtableResult;
-  } catch (error) {
-    console.error("Error in createRecordAndSaveLocally:", error);
-    throw error;
-  }
-}
+
 
 // 保存图片到 IndexedDB
 async function saveImageToIndexedDB(data) {
@@ -160,44 +79,6 @@ async function saveImageToIndexedDB(data) {
     return true;
   } catch (error) {
     console.error("Error saving to IndexedDB:", error);
-    throw error;
-  }
-}
-
-// 以下是原来的 Airtable 相关功能
-
-async function queryRecords() {
-  try {
-    // const records = await airbnbClient.listRecords();
-    // return records.map(record => ({
-    //   id: record.id,
-    //   description: record.fields.描述,
-    //   imageUrl: record.fields.图片?.[0]?.url
-    // }));
-  } catch (error) {
-    console.error("Error querying records:", error);
-    throw error;
-  }
-}
-
-async function finishRecords(recordIds) {
-  try {
-    // 实现标记记录为已完成的功能
-    // ...
-    return true;
-  } catch (error) {
-    console.error("Error finishing records:", error);
-    throw error;
-  }
-}
-
-async function createRecord(data, imageBlob, progressCallback) {
-  try {
-    // 实现创建记录的功能
-    // ...
-    return { success: true };
-  } catch (error) {
-    console.error("Error creating record:", error);
     throw error;
   }
 }

@@ -29,7 +29,7 @@ function createRecord() {
   // Show initial status message
   showMessage("正在保存...", "info");
   chrome.runtime.sendMessage({
-    action: "createRecord",
+    action: "saveToGallery",
     data: { note, imageUrl }
   }, response => {
     if (response && response.success) {
