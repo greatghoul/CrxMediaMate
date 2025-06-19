@@ -153,7 +153,12 @@ body {
 
 .bulk-actions {
   display: flex;
-  gap: 10px;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.bulk-actions button {
+  white-space: nowrap;
 }
 
 /* 模态框样式 */
@@ -254,4 +259,37 @@ body {
   text-align: center;
   padding: 50px 0;
   color: #6c757d;
+}
+
+/* 文章生成样式 */
+.article-container {
+  text-align: left;
+  max-height: 70vh;
+  overflow-y: auto;
+  padding-right: 10px;
+  margin: 0 auto;
+  width: 90%;
+  max-width: 600px;
+  user-select: text;
+}
+
+.article-container h1 {
+  font-size: 1.3em;
+  font-weight: bold;
+  margin-bottom: 15px;
+  text-align: left;
+  width: 100%;
+}
+
+.article-container img {
+  max-width: 90%;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  margin-bottom: 20px;
+  display: inline-block;
+}
+
+.article-container p {
+  margin: 20px 0;
+  line-height: 1.6;
 }

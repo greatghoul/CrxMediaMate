@@ -4,7 +4,7 @@ import { html, render, useState, useEffect } from './preact.js';
 import { IndexedDBService } from './indexedDBService.js';
 
 // 工具栏组件
-const Toolbar = ({ onAdd, onFilter, onSearch, selectedCount, onDeleteSelected }) => {
+const Toolbar = ({ onAdd, onFilter, onSearch, selectedCount, onDeleteSelected, onGenerateArticle }) => {
   return html`
     <div class="toolbar fixed-top">
       <div class="container">
@@ -26,6 +26,13 @@ const Toolbar = ({ onAdd, onFilter, onSearch, selectedCount, onDeleteSelected })
                 onClick=${onDeleteSelected}
               >
                 删除选中 (${selectedCount})
+              </button>
+              <button 
+                class="btn btn-success" 
+                disabled=${selectedCount === 0}
+                onClick=${onGenerateArticle}
+              >
+                生成文章 (${selectedCount})
               </button>
             </div>
           </div>
@@ -334,6 +341,123 @@ const ImageModal = ({ isOpen, image, onClose, onSave }) => {
   `;
 };
 
+// 文章生成模态框
+const ArticleModal = ({ isOpen, images, onClose }) => {
+  const [copied, setCopied] = useState(false);
+  const [articleContent, setArticleContent] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  // 当图片数组变化时生成文章
+  useEffect(() => {
+    if (isOpen && images && images.length > 0) {
+      generateArticleContent();
+    }
+  }, [isOpen, images]);
+
+  // 将Blob转换为Data URI
+  const convertBlobToDataUri = (blob) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        resolve(reader.result);
+      };
+      reader.readAsDataURL(blob);
+    });
+  };
+  
+  // 根据选中图片生成文章
+  const generateArticleContent = async () => {
+    if (!images || images.length === 0) {
+      setArticleContent('');
+      setLoading(false);
+      return;
+    }
+    
+    setLoading(true);
+    let content = '';
+    
+    // 添加开头鼓励性段落
+    content += '<p>搞笑图，让生活充满欢乐！每天看一看搞笑图，心情愉快一整天。</p>';
+    
+    // 添加每个图片及其描述
+    for (let i = 0; i < images.length; i++) {
+      const image = images[i];
+      const formattedIndex = String(i + 1).padStart(2, '0');
+      content += `<h1>${formattedIndex}. ${image.caption}</h1>`;
+      
+      // 将图片数据转换为 data URI
+      const dataUri = await convertBlobToDataUri(image.imageData);
+      content += `<img src="${dataUri}" alt="${image.caption}" />`;
+    }
+    
+    // 添加结尾鼓励性段落
+    content += '<p>搞笑图不仅能带给我们欢笑，还能帮助我们减轻压力，放松身心。赶紧收藏并分享这些有趣的搞笑图吧！</p>';
+    
+    setArticleContent(content);
+    setLoading(false);
+  };
+    // 复制文章内容
+  const handleCopy = () => {
+    const articleContainer = document.querySelector('.article-container');
+    if (!articleContainer) return;
+    
+    const selection = window.getSelection();
+    const range = document.createRange();
+    range.selectNodeContents(articleContainer);
+    selection.removeAllRanges();
+    selection.addRange(range);
+    
+    try {
+      document.execCommand('copy');
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('复制失败:', err);
+    } finally {
+      selection.removeAllRanges();
+    }
+  };
+  
+  if (!isOpen) return null;
+  
+  return html`
+    <div class="modal show d-block" tabindex="-1" role="dialog">
+      <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">生成的文章内容</h5>
+            <button type="button" class="btn-close" aria-label="Close" onClick=${onClose}></button>
+          </div>
+          <div class="modal-body">
+            ${loading ? html`
+              <div class="text-center p-5">
+                <div class="spinner-border text-primary" role="status">
+                  <span class="visually-hidden">生成文章中...</span>
+                </div>
+                <p class="mt-2">正在生成文章，请稍候...</p>
+              </div>
+            ` : html`
+              <div class="article-container" dangerouslySetInnerHTML=${{ __html: articleContent }}></div>
+            `}
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onClick=${onClose}>关闭</button>
+            <button 
+              type="button" 
+              class="btn btn-primary" 
+              onClick=${handleCopy}
+              disabled=${loading || !articleContent}
+            >
+              ${copied ? '已复制!' : '复制内容'}
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-backdrop show"></div>
+    </div>
+  `;
+};
+
 // 删除确认对话框
 const DeleteConfirmModal = ({ isOpen, selectedCount, onClose, onConfirm }) => {
   if (!isOpen) return null;
@@ -371,6 +495,8 @@ function App() {
   const [isModalOpen, setModalOpen] = useState(false);
   const [currentImage, setCurrentImage] = useState(null);
   const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [isArticleModalOpen, setArticleModalOpen] = useState(false);
+  const [selectedImageObjects, setSelectedImageObjects] = useState([]);
   
   // 加载图片数据
   useEffect(() => {
@@ -473,6 +599,32 @@ function App() {
     }
   };
   
+  // 处理生成文章
+  const handleGenerateArticle = async () => {
+    if (selectedImages.size === 0) return;
+    
+    try {
+      // 获取所有选中图片的详细信息
+      const selectedIds = Array.from(selectedImages);
+      const imageObjects = [];
+      
+      for (const id of selectedIds) {
+        const image = await IndexedDBService.getImage(id);
+        imageObjects.push(image);
+      }
+      
+      // 按创建时间排序
+      imageObjects.sort((a, b) => a.createdAt - b.createdAt);
+      
+      // 设置选中的图片对象并打开文章模态框
+      setSelectedImageObjects(imageObjects);
+      setArticleModalOpen(true);
+    } catch (error) {
+      console.error('Failed to generate article:', error);
+      alert('生成文章失败: ' + error.message);
+    }
+  };
+  
   // 处理过滤变化
   const handleFilterChange = (value) => {
     setFilter(value);
@@ -493,6 +645,7 @@ function App() {
         onSearch=${handleSearch}
         selectedCount=${selectedImages.size}
         onDeleteSelected=${() => setDeleteModalOpen(true)}
+        onGenerateArticle=${handleGenerateArticle}
       />
       
       <div class="container content-container">
@@ -516,6 +669,12 @@ function App() {
         selectedCount=${selectedImages.size}
         onClose=${() => setDeleteModalOpen(false)}
         onConfirm=${handleBulkDelete}
+      />
+      
+      <${ArticleModal}
+        isOpen=${isArticleModalOpen}
+        images=${selectedImageObjects}
+        onClose=${() => setArticleModalOpen(false)}
       />
     </div>
   `;
