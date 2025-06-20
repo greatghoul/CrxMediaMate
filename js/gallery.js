@@ -4,7 +4,7 @@ import { html, render, useState, useEffect } from './preact.js';
 import { IndexedDBService } from './indexedDBService.js';
 
 // 工具栏组件
-const Toolbar = ({ onAdd, onFilter, onSearch, selectedCount, onDeleteSelected, onGenerateArticle, onBatchPublish, onBatchUnpublish }) => {
+const Toolbar = ({ onAdd, onFilter, onSearch, selectedCount, onDeleteSelected, onGenerateArticle, onBatchPublish, onBatchUnpublish, filter }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   
   const toggleDropdown = () => {
@@ -70,10 +70,10 @@ const Toolbar = ({ onAdd, onFilter, onSearch, selectedCount, onDeleteSelected, o
                   class="form-control" 
                   placeholder="搜索描述..." 
                   onChange=${e => onSearch(e.target.value)}
-                />
-                <select 
+                />                <select 
                   class="form-select" 
                   onChange=${e => onFilter(e.target.value)}
+                  value=${filter}
                 >
                   <option value="all">全部图片</option>
                   <option value="published">已发布</option>
@@ -564,12 +564,11 @@ const DeleteConfirmModal = ({ isOpen, selectedCount, onClose, onConfirm }) => {
 };
 
 // 主应用组件
-function App() {
-  // 状态
+function App() {  // 状态
   const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedImages, setSelectedImages] = useState(new Set());
-  const [filter, setFilter] = useState('all');
+  const [filter, setFilter] = useState('unpublished');
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setModalOpen] = useState(false);
   const [currentImage, setCurrentImage] = useState(null);
@@ -765,8 +764,7 @@ function App() {
   // 处理搜索
   const handleSearch = (term) => {
     setSearchTerm(term);
-    clearSelection();
-  };    // 渲染组件
+    clearSelection();  };    // 渲染组件
   return html`
     <div class="gallery-container">      <${Toolbar}
         onAdd=${() => { setCurrentImage(null); setModalOpen(true); }}
@@ -777,6 +775,7 @@ function App() {
         onGenerateArticle=${handleGenerateArticle}
         onBatchPublish=${handleBatchPublish}
         onBatchUnpublish=${handleBatchUnpublish}
+        filter=${filter}
       />
       
       <div class="container content-container">
