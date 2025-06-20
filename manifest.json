@@ -27,21 +27,5 @@
     "16": "images/icon.png",
     "48": "images/icon.png",
     "128": "images/icon.png"
-  },
-  "web_accessible_resources": [
-    {
-      "resources": [
-        "newtab.html",
-        "js/newtab.js",
-        "css/article.css",
-        "gallery.html",
-        "js/gallery.js",
-        "js/indexedDBService.js",
-        "css/gallery.css"
-      ],
-      "matches": [
-        "<all_urls>"
-      ]
-    }
-  ]
+  }
 }
