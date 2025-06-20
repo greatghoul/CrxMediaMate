@@ -4,7 +4,24 @@ import { html, render, useState, useEffect } from './preact.js';
 import { IndexedDBService } from './indexedDBService.js';
 
 // 工具栏组件
-const Toolbar = ({ onAdd, onFilter, onSearch, selectedCount, onDeleteSelected, onGenerateArticle }) => {
+const Toolbar = ({ onAdd, onFilter, onSearch, selectedCount, onDeleteSelected, onGenerateArticle, onBatchPublish, onBatchUnpublish }) => {
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  
+  const toggleDropdown = () => {
+    setDropdownOpen(!dropdownOpen);
+  };
+  
+  // 关闭下拉菜单
+  const closeDropdown = () => {
+    setDropdownOpen(false);
+  };
+  
+  // 处理批量操作项点击
+  const handleBatchAction = (action) => {
+    closeDropdown();
+    action();
+  };
+  
   return html`
     <div class="toolbar fixed-top">
       <div class="container">
@@ -19,19 +36,29 @@ const Toolbar = ({ onAdd, onFilter, onSearch, selectedCount, onDeleteSelected, o
               >
                 <i class="bi bi-plus"></i> 添加图片
               </button>
-              <button 
-                class="btn btn-danger" 
-                disabled=${selectedCount === 0}
-                onClick=${onDeleteSelected}
-              >
-                删除选中 (${selectedCount})
-              </button>
-              <button 
+              <div class="custom-dropdown d-inline-block">
+                <button 
+                  class="btn btn-secondary" 
+                  type="button"
+                  disabled=${selectedCount === 0}
+                  onClick=${toggleDropdown}
+                >
+                  批量操作 ${dropdownOpen ? '▲' : '▼'}
+                </button>
+                ${dropdownOpen && html`
+                  <div class="custom-dropdown-menu">
+                    <button class="dropdown-item" onClick=${() => handleBatchAction(onBatchPublish)}>标记为已发布</button>
+                    <button class="dropdown-item" onClick=${() => handleBatchAction(onBatchUnpublish)}>标记为未发布</button>
+                    <div class="dropdown-divider"></div>
+                    <button class="dropdown-item text-danger" onClick=${() => handleBatchAction(onDeleteSelected)}>删除</button>
+                  </div>
+                `}
+              </div>              <button 
                 class="btn btn-success" 
                 disabled=${selectedCount === 0}
                 onClick=${onGenerateArticle}
               >
-                生成文章 (${selectedCount})
+                生成文章
               </button>
             </div>
           </div>
@@ -662,6 +689,34 @@ function App() {
     }
   };
   
+  // 处理批量标记为已发布
+  const handleBatchPublish = async () => {
+    try {
+      const selectedIds = Array.from(selectedImages);
+      for (const id of selectedIds) {
+        await IndexedDBService.updateImage(id, { published: true });
+      }
+      loadImages();
+    } catch (error) {
+      console.error('Failed to update images:', error);
+      alert('更新图片状态失败: ' + error.message);
+    }
+  };
+  
+  // 处理批量标记为未发布
+  const handleBatchUnpublish = async () => {
+    try {
+      const selectedIds = Array.from(selectedImages);
+      for (const id of selectedIds) {
+        await IndexedDBService.updateImage(id, { published: false });
+      }
+      loadImages();
+    } catch (error) {
+      console.error('Failed to update images:', error);
+      alert('更新图片状态失败: ' + error.message);
+    }
+  };
+  
   // 处理批量删除
   const handleBulkDelete = async () => {
     try {
@@ -720,6 +775,8 @@ function App() {
         selectedCount=${selectedImages.size}
         onDeleteSelected=${() => setDeleteModalOpen(true)}
         onGenerateArticle=${handleGenerateArticle}
+        onBatchPublish=${handleBatchPublish}
+        onBatchUnpublish=${handleBatchUnpublish}
       />
       
       <div class="container content-container">
