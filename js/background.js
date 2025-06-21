@@ -27,8 +27,8 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
     chrome.windows.getCurrent({}, (currentWindow) => {
       const width = 500;
       const height = 600;
-      // 计算当前窗口中央位置
-      const left = Math.round(currentWindow.left + (currentWindow.width - width) / 2);
+      // 计算窗口右侧距离 200 像素的位置
+      const left = Math.max(0, currentWindow.left + currentWindow.width - width - 200);
       const top = Math.round(currentWindow.top + (currentWindow.height - height) / 2);
       chrome.windows.create({
         url: popupUrl,
