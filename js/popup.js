@@ -14,18 +14,13 @@ function showMessage(message, type = 'info') {
   statusMessage.style.display = "block";
 }
 
-// 更新标题以显示未发布的图片数量
-async function updateTitleWithUnpublishedCount() {
+// 更新未发布的图片数量显示
+async function showUnpublishedCount() {
   try {
     const count = await IndexedDBService.getUnpublishedCount();
-    console.log('未发布图片数量:', count);
-    if (count > 0) {
-      document.title = `沙雕图 (${count}张未发布)`;
-    } else {
-      document.title = "沙雕图";
-    }
+    showMessage(`未发布图片数量: ${count}`, 'info');
   } catch (error) {
-    console.error('获取未发布图片数量失败:', error);
+    showMessage('获取未发布图片数量失败:', 'error');
   }
 }
 
@@ -50,11 +45,8 @@ function createRecord() {
     action: "saveToGallery",
     data: { note, imageUrl }
   }, response => {    if (response && response.success) {
-      // Successfully created record in Airtable and local IndexedDB
-      showMessage('沙雕图已保存', 'success');
-      // Update the count before closing
-      updateTitleWithUnpublishedCount();
-      setTimeout(() => window.close(), 1500);
+      showMessage('图片已保存', 'success');
+      setTimeout(() => window.close(), 2000);
     } else {
       // Show error message
       console.error("创建记录失败:", response.error);
@@ -68,5 +60,5 @@ function createRecord() {
 previewImage.src = imageUrl;
 saveButton.addEventListener('click', createRecord);
 
-// 页面加载时更新标题
-updateTitleWithUnpublishedCount();
+// 页面加载时更新未发布图片数量
+showUnpublishedCount();
