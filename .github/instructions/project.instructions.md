@@ -16,3 +16,7 @@ applyTo: '**'
    import { html, render, useState, useEffect } from './preact.js';
    ```
 2. 总是使用 html 来创建模板，比如 html`<div class="foo">...</div>`
+
+## 其它
+
+1. 不需要使用 Opened Simple Browser 来测试页面，因为这是 Chrome Extension 项目，直接在 Chrome 中加载扩展即可。

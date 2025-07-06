@@ -10,3 +10,7 @@ export const notionToken = "your-notion-token-here";
 
 // ImgBB API Key from https://api.imgbb.com/
 export const imgbbApiKey = "your-imgbb-api-key-here";
+
+// AWS Polly Configuration for Text-to-Speech
+export const awsAccessKeyId = "your-aws-access-key-id-here";
+export const awsSecretAccessKey = "your-aws-secret-access-key-here";

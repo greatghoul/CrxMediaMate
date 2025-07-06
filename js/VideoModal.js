@@ -1,48 +1,111 @@
 // VideoModal.js - 视频生成模态框组件
 
 import { html, useState, useEffect } from './preact.js';
+import { pollyService } from './awsPollyService.js';
 
 // 视频生成模态框
 const VideoModal = ({ isOpen, images, onClose }) => {
   const [videoUrl, setVideoUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [audioContext, setAudioContext] = useState(null);
+  const [statusMessage, setStatusMessage] = useState('');
+  
+  // 初始化音频上下文
+  useEffect(() => {
+    if (isOpen && !audioContext) {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      setAudioContext(ctx);
+    }
+  }, [isOpen]);
   
   // 生成视频
   const generateVideo = async () => {
     if (!images || images.length === 0) return;
     
+    // 检查 Polly 配置
+    if (!pollyService.isConfigured()) {
+      alert('Amazon Polly 未配置，请在 settings.js 中设置 AWS 凭证（awsAccessKeyId 和 awsSecretAccessKey）');
+      return;
+    }
+    
     setLoading(true);
     setProgress(0);
+    setStatusMessage('初始化...');
     
     try {
-      // 使用新的视频生成方法
+      // 使用带语音的视频生成方法
       const videoBlob = await createVideoFromImages(images);
       const url = URL.createObjectURL(videoBlob);
       setVideoUrl(url);
+      setStatusMessage('');
     } catch (error) {
       console.error('视频生成失败:', error);
-      alert('视频生成失败，请重试');
+      if (error.message.includes('Amazon Polly')) {
+        alert('Amazon Polly 配置有误，请检查 settings.js 中的 AWS 凭证是否正确');
+      } else {
+        alert('视频生成失败，请重试: ' + error.message);
+      }
+      setStatusMessage('');
     } finally {
       setLoading(false);
       setProgress(0);
     }
   };
   
-  // 从图片创建视频
+  // 生成语音音频（始终使用 Amazon Polly）
+  const generateSpeechAudio = async (text) => {
+    if (!text || text.trim() === '') {
+      // 返回3秒静音
+      const duration = 3;
+      const sampleRate = audioContext.sampleRate;
+      const buffer = audioContext.createBuffer(1, duration * sampleRate, sampleRate);
+      return { audioBuffer: buffer, duration: duration * 1000 };
+    }
+    
+    // 检查 Polly 是否配置
+    if (!pollyService.isConfigured()) {
+      throw new Error('Amazon Polly 未配置，请在 settings.js 中设置 AWS 凭证');
+    }
+    
+    setStatusMessage(`使用 Amazon Polly 生成语音: ${text.substring(0, 20)}...`);
+    return await pollyService.synthesizeSpeech(text, audioContext);
+  };
+  
+  // 从图片创建视频（带语音）
   const createVideoFromImages = async (images) => {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     
-    // 设置视频尺寸 - 使用固定尺寸确保兼容性
+    // 设置视频尺寸 (16:9)
     canvas.width = 1280;
     canvas.height = 720;
     
+    // 预先生成所有语音音频
+    const speechData = [];
+    setProgress(10);
+    setStatusMessage('生成语音音频...');
+    
+    for (let i = 0; i < images.length; i++) {
+      const image = images[i];
+      const speech = await generateSpeechAudio(image.caption);
+      speechData.push(speech);
+      setProgress(10 + (i / images.length) * 40); // 10-50%用于语音生成
+    }
+    
     // 创建视频流
     const stream = canvas.captureStream(25); // 25fps
+    
+    // 创建并添加音频轨道
+    const audioTrack = await createMixedAudioTrack(speechData);
+    if (audioTrack) {
+      stream.addTrack(audioTrack);
+    }
+    
     const mediaRecorder = new MediaRecorder(stream, {
-      mimeType: 'video/webm;codecs=vp8',
-      videoBitsPerSecond: 2500000
+      mimeType: 'video/webm;codecs=vp8,opus',
+      videoBitsPerSecond: 2500000,
+      audioBitsPerSecond: 128000
     });
     
     const chunks = [];
@@ -69,76 +132,142 @@ const VideoModal = ({ isOpen, images, onClose }) => {
       mediaRecorder.start();
       
       // 渲染图片序列
-      renderImageSequence(images, canvas, ctx, () => {
-        // 录制完成后停止
+      renderImageSequenceWithAudio(images, speechData, canvas, ctx, () => {
         setTimeout(() => {
           mediaRecorder.stop();
           stream.getTracks().forEach(track => track.stop());
-        }, 500); // 给一点缓冲时间
+        }, 500);
       });
     });
   };
   
+  // 创建混合音频轨道
+  const createMixedAudioTrack = async (speechDataArray) => {
+    try {
+      if (!audioContext) return null;
+      
+      // 计算总时长
+      const totalDuration = speechDataArray.reduce((sum, speech) => sum + speech.duration, 0) / 1000;
+      
+      // 创建主音频缓冲区
+      const sampleRate = audioContext.sampleRate;
+      const totalSamples = Math.ceil(totalDuration * sampleRate);
+      const mixedBuffer = audioContext.createBuffer(2, totalSamples, sampleRate); // 立体声
+      
+      // 混合所有音频
+      let currentOffset = 0;
+      for (const speechData of speechDataArray) {
+        if (speechData.audioBuffer) {
+          const startSample = Math.floor(currentOffset * sampleRate / 1000);
+          
+          // 处理单声道或立体声
+          const sourceChannels = speechData.audioBuffer.numberOfChannels;
+          const sourceSampleRate = speechData.audioBuffer.sampleRate;
+          
+          for (let channel = 0; channel < 2; channel++) {
+            const mixedChannelData = mixedBuffer.getChannelData(channel);
+            const sourceChannelData = speechData.audioBuffer.getChannelData(
+              sourceChannels === 1 ? 0 : channel
+            );
+            
+            // 重采样（如果需要）
+            const sampleRateRatio = sourceSampleRate / sampleRate;
+            const sourceSamples = sourceChannelData.length;
+            const targetSamples = Math.floor(sourceSamples / sampleRateRatio);
+            
+            for (let i = 0; i < targetSamples && (startSample + i) < mixedChannelData.length; i++) {
+              const sourceIndex = Math.floor(i * sampleRateRatio);
+              mixedChannelData[startSample + i] = sourceChannelData[sourceIndex];
+            }
+          }
+        }
+        
+        currentOffset += speechData.duration;
+      }
+      
+      // 创建音频源和目标
+      const source = audioContext.createBufferSource();
+      source.buffer = mixedBuffer;
+      
+      const destination = audioContext.createMediaStreamDestination();
+      source.connect(destination);
+      
+      // 启动播放
+      source.start();
+      
+      return destination.stream.getAudioTracks()[0];
+    } catch (error) {
+      console.error('创建音频轨道失败:', error);
+      return null;
+    }
+  };
+  
   // 渲染图片序列
-  const renderImageSequence = async (images, canvas, ctx, onComplete) => {
-    const imageDuration = 5000; // 每张图片显示5秒
-    const fps = 25;
-    const framesPerImage = Math.floor(imageDuration / 1000 * fps);
+  const renderImageSequenceWithAudio = async (images, speechData, canvas, ctx, onComplete) => {
+    setStatusMessage('渲染视频...');
     
     for (let i = 0; i < images.length; i++) {
       const image = images[i];
-      setProgress((i / images.length) * 100);
+      const speech = speechData[i];
       
       try {
-        const img = await loadImage(image.imageData);
+        // 加载图片
+        const img = await loadImage(image.blob);
         
-        // 计算图片在画布中的位置和尺寸（保持比例）
+        // 清空画布
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // 绘制图片
         const { x, y, width, height } = calculateImagePosition(img, canvas.width, canvas.height);
+        ctx.drawImage(img, x, y, width, height);
         
-        // 渲染当前图片的所有帧
-        for (let frame = 0; frame < framesPerImage; frame++) {
-          // 清空画布
-          ctx.fillStyle = '#000000';
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-          
-          // 绘制图片
-          ctx.drawImage(img, x, y, width, height);
-          
-          // 添加图片描述文字
-          // if (image.caption) {
-          //   drawCaption(ctx, image.caption, canvas.width, canvas.height);
-          // }
-          
-          // 等待下一帧
-          await new Promise(resolve => setTimeout(resolve, 1000 / fps));
+        // 绘制文字
+        if (image.caption) {
+          drawCaption(ctx, image.caption, canvas.width, canvas.height);
         }
+        
+        // 等待语音播放时间
+        const displayDuration = speech.duration;
+        await new Promise(resolve => setTimeout(resolve, displayDuration));
+        
+        // 更新进度
+        setProgress(50 + ((i + 1) / images.length) * 50);
+        
       } catch (error) {
-        console.error('Error processing image:', error);
-        continue;
+        console.error(`处理第 ${i + 1} 张图片失败:`, error);
+        // 显示错误帧
+        ctx.fillStyle = '#ff0000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '48px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('图片加载失败', canvas.width / 2, canvas.height / 2);
+        
+        await new Promise(resolve => setTimeout(resolve, 3000));
       }
     }
     
-    setProgress(100);
     onComplete();
   };
   
-  // 计算图片在画布中的位置（居中并保持比例）
+  // 计算图片位置（保持比例）
   const calculateImagePosition = (img, canvasWidth, canvasHeight) => {
-    const imgRatio = img.width / img.height;
-    const canvasRatio = canvasWidth / canvasHeight;
+    const imgAspectRatio = img.width / img.height;
+    const canvasAspectRatio = canvasWidth / canvasHeight;
     
     let width, height, x, y;
     
-    if (imgRatio > canvasRatio) {
-      // 图片较宽，以宽度为准
+    if (imgAspectRatio > canvasAspectRatio) {
+      // 图片更宽，以宽度为准
       width = canvasWidth;
-      height = canvasWidth / imgRatio;
+      height = canvasWidth / imgAspectRatio;
       x = 0;
       y = (canvasHeight - height) / 2;
     } else {
-      // 图片较高，以高度为准
+      // 图片更高，以高度为准
       height = canvasHeight;
-      width = canvasHeight * imgRatio;
+      width = canvasHeight * imgAspectRatio;
       x = (canvasWidth - width) / 2;
       y = 0;
     }
@@ -218,7 +347,7 @@ const VideoModal = ({ isOpen, images, onClose }) => {
                 <div class="spinner-border text-primary" role="status">
                   <span class="visually-hidden">生成视频中...</span>
                 </div>
-                <p class="mt-2">正在生成视频，请稍候...</p>
+                <p class="mt-2">${statusMessage || '正在使用 Amazon Polly 生成视频，请稍候...'}</p>
                 <div class="progress mt-3" style="height: 8px;">
                   <div 
                     class="progress-bar" 
@@ -239,7 +368,7 @@ const VideoModal = ({ isOpen, images, onClose }) => {
                 </video>
                 <div class="mt-3">
                   <small class="text-muted">
-                    视频包含 ${images ? images.length : 0} 张图片，每张图片显示 5 秒钟
+                    视频包含 ${images ? images.length : 0} 张图片，配有 Amazon Polly 中文语音
                   </small>
                 </div>
               </div>
