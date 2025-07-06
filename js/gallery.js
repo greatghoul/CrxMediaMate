@@ -134,7 +134,7 @@ const SelectionControls = ({ onSelectAll, onDeselectAll, selectedCount, totalCou
 };
 
 // 图片卡片组件
-const ImageCard = ({ image, selected, onSelect, onEdit }) => {
+const ImageCard = ({ image, selected, onSelect, onEdit, selectionOrder }) => {
   const handleCardClick = (e) => {
     // 卡片点击切换选中状态
     onSelect(image.id, !selected);
@@ -169,9 +169,7 @@ const ImageCard = ({ image, selected, onSelect, onEdit }) => {
       <div class=${`image-card ${selected ? 'selected' : ''}`} onClick=${handleCardClick}>
         ${selected && html`
           <div class="card-selected-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-              <path d="M10.97 4.97a.75.75 0 0 1 1.07 1.05l-3.99 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.267.267 0 0 1 .02-.022z"/>
-            </svg>
+            ${selectionOrder}
           </div>
         `}
         <div class="card-img-container">
@@ -224,15 +222,21 @@ const ImageGrid = ({ images, selectedImages, onSelect, onEdit, loading }) => {
   
   return html`
     <div class="row image-grid">
-      ${images.map(image => html`
-        <${ImageCard} 
-          key=${image.id}
-          image=${image}
-          selected=${selectedImages.has(image.id)}
-          onSelect=${onSelect}
-          onEdit=${onEdit}
-        />
-      `)}
+      ${images.map(image => {
+        const isSelected = selectedImages.includes(image.id);
+        const selectionOrder = isSelected ? selectedImages.indexOf(image.id) + 1 : 0;
+        
+        return html`
+          <${ImageCard} 
+            key=${image.id}
+            image=${image}
+            selected=${isSelected}
+            selectionOrder=${selectionOrder}
+            onSelect=${onSelect}
+            onEdit=${onEdit}
+          />
+        `;
+      })}
     </div>
   `;
 };
@@ -575,7 +579,7 @@ const DeleteConfirmModal = ({ isOpen, selectedCount, onClose, onConfirm }) => {
 function App() {  // 状态
   const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedImages, setSelectedImages] = useState(new Set());
+  const [selectedImages, setSelectedImages] = useState([]); // 改用数组来保持选择顺序
   const [filter, setFilter] = useState('unpublished');
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setModalOpen] = useState(false);
@@ -613,33 +617,36 @@ function App() {  // 状态
     }
   };
   
-  // 处理图片选择
+  // 处理图片选择 - 支持按选择顺序
   const handleImageSelect = (id, isSelected) => {
     setSelectedImages(prevSelected => {
-      const newSelected = new Set(prevSelected);
-      
       if (isSelected) {
-        newSelected.add(id);
+        // 添加到选择列表（如果还没有）
+        if (!prevSelected.includes(id)) {
+          return [...prevSelected, id];
+        }
+        return prevSelected;
       } else {
-        newSelected.delete(id);
+        // 从选择列表中移除
+        return prevSelected.filter(selectedId => selectedId !== id);
       }
-      
-      return newSelected;
     });
   };
   
   // 清除所有选择
   const clearSelection = () => {
-    setSelectedImages(new Set());
+    setSelectedImages([]);
   };
   
   // 全选当前显示的所有图片
   const selectAll = () => {
-    const newSelected = new Set(selectedImages);
+    // 将当前过滤后显示的所有图片ID添加到选择列表中（按显示顺序）
+    const newSelected = [...selectedImages];
     
-    // 将当前过滤后显示的所有图片ID添加到选择集合中
     images.forEach(image => {
-      newSelected.add(image.id);
+      if (!newSelected.includes(image.id)) {
+        newSelected.push(image.id);
+      }
     });
     
     setSelectedImages(newSelected);
@@ -647,12 +654,9 @@ function App() {  // 状态
   
   // 取消全选当前显示的所有图片
   const deselectAll = () => {
-    const newSelected = new Set(selectedImages);
-    
-    // 从选择集合中移除当前过滤后显示的所有图片ID
-    images.forEach(image => {
-      newSelected.delete(image.id);
-    });
+    // 从选择列表中移除当前过滤后显示的所有图片ID
+    const currentImageIds = images.map(image => image.id);
+    const newSelected = selectedImages.filter(id => !currentImageIds.includes(id));
     
     setSelectedImages(newSelected);
   };
@@ -700,8 +704,7 @@ function App() {  // 状态
   // 处理批量标记为已发布
   const handleBatchPublish = async () => {
     try {
-      const selectedIds = Array.from(selectedImages);
-      for (const id of selectedIds) {
+      for (const id of selectedImages) { // 直接迭代数组
         await IndexedDBService.updateImage(id, { published: true });
       }
       loadImages();
@@ -714,8 +717,7 @@ function App() {  // 状态
   // 处理批量标记为未发布
   const handleBatchUnpublish = async () => {
     try {
-      const selectedIds = Array.from(selectedImages);
-      for (const id of selectedIds) {
+      for (const id of selectedImages) { // 直接迭代数组
         await IndexedDBService.updateImage(id, { published: false });
       }
       loadImages();
@@ -728,7 +730,7 @@ function App() {  // 状态
   // 处理批量删除
   const handleBulkDelete = async () => {
     try {
-      await IndexedDBService.bulkDelete(Array.from(selectedImages));
+      await IndexedDBService.bulkDelete(selectedImages); // 直接使用数组
       clearSelection();
       setDeleteModalOpen(false);
       loadImages();
@@ -738,22 +740,18 @@ function App() {  // 状态
     }
   };
   
-  // 处理生成文章
+  // 处理生成文章 - 按选择顺序
   const handleGenerateArticle = async () => {
-    if (selectedImages.size === 0) return;
+    if (selectedImages.length === 0) return;
     
     try {
-      // 获取所有选中图片的详细信息
-      const selectedIds = Array.from(selectedImages);
+      // 按选择顺序获取图片的详细信息
       const imageObjects = [];
       
-      for (const id of selectedIds) {
+      for (const id of selectedImages) { // 保持选择顺序
         const image = await IndexedDBService.getImage(id);
         imageObjects.push(image);
       }
-      
-      // 按创建时间排序
-      imageObjects.sort((a, b) => a.createdAt - b.createdAt);
       
       // 设置选中的图片对象并打开文章模态框
       setSelectedImageObjects(imageObjects);
@@ -765,20 +763,16 @@ function App() {  // 状态
   };
   
   const handleGenerateVideo = async () => {
-    if (selectedImages.size === 0) return;
+    if (selectedImages.length === 0) return;
     
     try {
-      // 获取所有选中图片的详细信息
-      const selectedIds = Array.from(selectedImages);
+      // 按选择顺序获取图片的详细信息
       const imageObjects = [];
       
-      for (const id of selectedIds) {
+      for (const id of selectedImages) { // 保持选择顺序
         const image = await IndexedDBService.getImage(id);
         imageObjects.push(image);
       }
-      
-      // 按创建时间排序
-      imageObjects.sort((a, b) => a.createdAt - b.createdAt);
       
       // 设置选中的图片对象并打开视频模态框
       setSelectedImageObjects(imageObjects);
@@ -804,7 +798,7 @@ function App() {  // 状态
           onAdd=${() => { setCurrentImage(null); setModalOpen(true); }}
           onFilter=${handleFilterChange}
           onSearch=${handleSearch}
-          selectedCount=${selectedImages.size}
+          selectedCount=${selectedImages.length}
           onDeleteSelected=${() => setDeleteModalOpen(true)}
           onGenerateArticle=${handleGenerateArticle}
           onGenerateVideo=${handleGenerateVideo}
@@ -817,7 +811,7 @@ function App() {  // 状态
         <${SelectionControls}
           onSelectAll=${selectAll}
           onDeselectAll=${deselectAll}
-          selectedCount=${selectedImages.size}
+          selectedCount=${selectedImages.length}
           totalCount=${images.length}
         />
         
@@ -838,7 +832,7 @@ function App() {  // 状态
       
       <${DeleteConfirmModal}
         isOpen=${isDeleteModalOpen}
-        selectedCount=${selectedImages.size}
+        selectedCount=${selectedImages.length}
         onClose=${() => setDeleteModalOpen(false)}
         onConfirm=${handleBulkDelete}
       />
