@@ -50,7 +50,7 @@ class AWSSignatureV4 {
   }
 
   // 创建规范请求
-  createCanonicalRequest(method, uri, queryString, headers, payload) {
+  createCanonicalRequest(method, uri, queryString, headers, payloadHash) {
     const canonicalHeaders = Object.keys(headers)
       .sort()
       .map(key => `${key.toLowerCase()}:${headers[key]}`)
@@ -67,20 +67,21 @@ class AWSSignatureV4 {
       queryString,
       canonicalHeaders,
       signedHeaders,
-      payload
+      payloadHash
     ].join('\n');
   }
 
   // 创建字符串以供签名
-  createStringToSign(timestamp, canonicalRequest) {
+  async createStringToSign(timestamp, canonicalRequest) {
     const algorithm = 'AWS4-HMAC-SHA256';
     const credentialScope = `${this.getDateString()}/${this.region}/${this.service}/aws4_request`;
+    const hashedCanonicalRequest = await this.sha256(canonicalRequest);
     
     return [
       algorithm,
       timestamp,
       credentialScope,
-      this.sha256(canonicalRequest)
+      hashedCanonicalRequest
     ].join('\n');
   }
 
@@ -100,7 +101,8 @@ class AWSSignatureV4 {
     const timestamp = this.getTimestamp();
     headers['x-amz-date'] = timestamp;
 
-    const canonicalRequest = this.createCanonicalRequest(method, uri, queryString, headers, payload);
+    const payloadHash = await this.sha256(payload);
+    const canonicalRequest = this.createCanonicalRequest(method, uri, queryString, headers, payloadHash);
     const stringToSign = await this.createStringToSign(timestamp, canonicalRequest);
     const signature = await this.calculateSignature(stringToSign);
 
@@ -124,7 +126,7 @@ export class AWSPollyService {
     this.config = {
       accessKeyId: awsAccessKeyId,
       secretAccessKey: awsSecretAccessKey,
-      region: "ap-southeast-1",
+      region: "us-east-1", // 使用支持中文语音的区域
       voiceId: "Zhiyu",
       engine: "neural",
       outputFormat: "mp3",
@@ -177,22 +179,22 @@ export class AWSPollyService {
         VoiceId: this.config.voiceId,
         OutputFormat: this.config.outputFormat,
         SampleRate: this.config.sampleRate,
-        TextType: this.config.textType
+        TextType: this.config.textType,
+        Engine: this.config.engine || 'neural'
       });
 
       const headers = {
         'Content-Type': 'application/x-amz-json-1.0',
-        'Host': `polly.${this.config.region}.amazonaws.com`,
-        'Content-Length': requestBody.length.toString()
+        'X-Amz-Target': 'com.amazonaws.polly.service.Polly_20160610.SynthesizeSpeech',
+        'Host': `polly.${this.config.region}.amazonaws.com`
       };
 
-      const payloadHash = await this.signer.sha256(requestBody);
       const authorization = await this.signer.createAuthorizationHeader(
         'POST',
         '/v1/speech',
         '',
         headers,
-        payloadHash
+        requestBody
       );
 
       headers['Authorization'] = authorization;
@@ -204,7 +206,9 @@ export class AWSPollyService {
       });
 
       if (!response.ok) {
-        throw new Error(`Polly API 错误: ${response.status} ${response.statusText}`);
+        const errorText = await response.text();
+        console.error('AWS Polly API 错误详情:', errorText);
+        throw new Error(`Polly API 错误: ${response.status} ${response.statusText} - ${errorText}`);
       }
 
       const audioArrayBuffer = await response.arrayBuffer();
