@@ -55,11 +55,18 @@ const VideoModal = ({ isOpen, images, onClose }) => {
   
   // 生成语音音频（始终使用 Amazon Polly）
   const generateSpeechAudio = async (text) => {
+    // 确保音频上下文可用
+    let currentAudioContext = audioContext;
+    if (!currentAudioContext) {
+      currentAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+      setAudioContext(currentAudioContext);
+    }
+    
     if (!text || text.trim() === '') {
       // 返回3秒静音
       const duration = 3;
-      const sampleRate = audioContext.sampleRate;
-      const buffer = audioContext.createBuffer(1, duration * sampleRate, sampleRate);
+      const sampleRate = currentAudioContext.sampleRate;
+      const buffer = currentAudioContext.createBuffer(1, duration * sampleRate, sampleRate);
       return { audioBuffer: buffer, duration: duration * 1000 };
     }
     
@@ -69,7 +76,7 @@ const VideoModal = ({ isOpen, images, onClose }) => {
     }
     
     setStatusMessage(`使用 Amazon Polly 生成语音: ${text.substring(0, 20)}...`);
-    return await pollyService.synthesizeSpeech(text, audioContext);
+    return await pollyService.synthesizeSpeech(text, currentAudioContext);
   };
   
   // 从图片创建视频（带语音）
@@ -144,15 +151,20 @@ const VideoModal = ({ isOpen, images, onClose }) => {
   // 创建混合音频轨道
   const createMixedAudioTrack = async (speechDataArray) => {
     try {
-      if (!audioContext) return null;
+      // 确保音频上下文可用
+      let currentAudioContext = audioContext;
+      if (!currentAudioContext) {
+        currentAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+        setAudioContext(currentAudioContext);
+      }
       
       // 计算总时长
       const totalDuration = speechDataArray.reduce((sum, speech) => sum + speech.duration, 0) / 1000;
       
       // 创建主音频缓冲区
-      const sampleRate = audioContext.sampleRate;
+      const sampleRate = currentAudioContext.sampleRate;
       const totalSamples = Math.ceil(totalDuration * sampleRate);
-      const mixedBuffer = audioContext.createBuffer(2, totalSamples, sampleRate); // 立体声
+      const mixedBuffer = currentAudioContext.createBuffer(2, totalSamples, sampleRate); // 立体声
       
       // 混合所有音频
       let currentOffset = 0;
@@ -186,10 +198,10 @@ const VideoModal = ({ isOpen, images, onClose }) => {
       }
       
       // 创建音频源和目标
-      const source = audioContext.createBufferSource();
+      const source = currentAudioContext.createBufferSource();
       source.buffer = mixedBuffer;
       
-      const destination = audioContext.createMediaStreamDestination();
+      const destination = currentAudioContext.createMediaStreamDestination();
       source.connect(destination);
       
       // 启动播放
@@ -212,7 +224,7 @@ const VideoModal = ({ isOpen, images, onClose }) => {
       
       try {
         // 加载图片
-        const img = await loadImage(image.blob);
+        const img = await loadImage(image);
         
         // 清空画布
         ctx.fillStyle = '#000000';
@@ -236,6 +248,8 @@ const VideoModal = ({ isOpen, images, onClose }) => {
         
       } catch (error) {
         console.error(`处理第 ${i + 1} 张图片失败:`, error);
+        setStatusMessage(`处理第 ${i + 1} 张图片失败: ${error.message}`);
+        
         // 显示错误帧
         ctx.fillStyle = '#ff0000';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -243,6 +257,7 @@ const VideoModal = ({ isOpen, images, onClose }) => {
         ctx.font = '48px Arial';
         ctx.textAlign = 'center';
         ctx.fillText('图片加载失败', canvas.width / 2, canvas.height / 2);
+        ctx.fillText(error.message, canvas.width / 2, canvas.height / 2 + 60);
         
         await new Promise(resolve => setTimeout(resolve, 3000));
       }
@@ -299,12 +314,41 @@ const VideoModal = ({ isOpen, images, onClose }) => {
   };
   
   // 加载图片
-  const loadImage = (blob) => {
+  const loadImage = (imageData) => {
     return new Promise((resolve, reject) => {
       const img = new Image();
-      img.onload = () => resolve(img);
-      img.onerror = reject;
-      img.src = URL.createObjectURL(blob);
+      img.onload = () => {
+        // 清理临时 URL
+        if (img.src.startsWith('blob:')) {
+          URL.revokeObjectURL(img.src);
+        }
+        resolve(img);
+      };
+      img.onerror = (error) => {
+        console.error('图片加载失败:', error);
+        reject(new Error('图片加载失败'));
+      };
+      
+      // 检查图片数据类型并相应处理
+      if (imageData instanceof Blob) {
+        // 直接传入 Blob
+        img.src = URL.createObjectURL(imageData);
+      } else if (typeof imageData === 'string') {
+        // 如果是 data URL 或普通 URL
+        img.src = imageData;
+      } else if (imageData && imageData.imageData instanceof Blob) {
+        // 图片对象，imageData 属性是 Blob（来自 IndexedDB）
+        img.src = URL.createObjectURL(imageData.imageData);
+      } else if (imageData && imageData.blob instanceof Blob) {
+        // 图片对象，blob 属性是 Blob
+        img.src = URL.createObjectURL(imageData.blob);
+      } else if (imageData && typeof imageData.url === 'string') {
+        // 图片对象，url 属性是字符串
+        img.src = imageData.url;
+      } else {
+        console.error('无效的图片数据格式:', imageData);
+        reject(new Error('无效的图片数据格式'));
+      }
     });
   };
   

@@ -51,20 +51,26 @@ class AWSSignatureV4 {
 
   // 创建规范请求
   createCanonicalRequest(method, uri, queryString, headers, payloadHash) {
+    // 规范化头部：按字母顺序排序，转换为小写，去除多余空格
     const canonicalHeaders = Object.keys(headers)
+      .map(key => key.toLowerCase())
       .sort()
-      .map(key => `${key.toLowerCase()}:${headers[key]}`)
+      .map(key => {
+        const originalKey = Object.keys(headers).find(k => k.toLowerCase() === key);
+        const value = headers[originalKey].toString().trim().replace(/\s+/g, ' ');
+        return `${key}:${value}`;
+      })
       .join('\n') + '\n';
 
     const signedHeaders = Object.keys(headers)
-      .sort()
       .map(key => key.toLowerCase())
+      .sort()
       .join(';');
 
     return [
       method,
       uri,
-      queryString,
+      queryString || '',
       canonicalHeaders,
       signedHeaders,
       payloadHash
@@ -74,7 +80,8 @@ class AWSSignatureV4 {
   // 创建字符串以供签名
   async createStringToSign(timestamp, canonicalRequest) {
     const algorithm = 'AWS4-HMAC-SHA256';
-    const credentialScope = `${this.getDateString()}/${this.region}/${this.service}/aws4_request`;
+    const date = timestamp.substring(0, 8);
+    const credentialScope = `${date}/${this.region}/${this.service}/aws4_request`;
     const hashedCanonicalRequest = await this.sha256(canonicalRequest);
     
     return [
@@ -86,8 +93,8 @@ class AWSSignatureV4 {
   }
 
   // 计算签名
-  async calculateSignature(stringToSign) {
-    const kDate = await this.hmacSha256(`AWS4${this.secretAccessKey}`, this.getDateString());
+  async calculateSignature(stringToSign, date) {
+    const kDate = await this.hmacSha256(`AWS4${this.secretAccessKey}`, date);
     const kRegion = await this.hmacSha256(kDate, this.region);
     const kService = await this.hmacSha256(kRegion, this.service);
     const kSigning = await this.hmacSha256(kService, 'aws4_request');
@@ -99,19 +106,22 @@ class AWSSignatureV4 {
   // 创建授权头
   async createAuthorizationHeader(method, uri, queryString, headers, payload) {
     const timestamp = this.getTimestamp();
+    const date = timestamp.substring(0, 8);
+    
+    // 添加必需的头部
     headers['x-amz-date'] = timestamp;
 
     const payloadHash = await this.sha256(payload);
     const canonicalRequest = this.createCanonicalRequest(method, uri, queryString, headers, payloadHash);
     const stringToSign = await this.createStringToSign(timestamp, canonicalRequest);
-    const signature = await this.calculateSignature(stringToSign);
+    const signature = await this.calculateSignature(stringToSign, date);
 
     const signedHeaders = Object.keys(headers)
-      .sort()
       .map(key => key.toLowerCase())
+      .sort()
       .join(';');
 
-    const credentialScope = `${this.getDateString()}/${this.region}/${this.service}/aws4_request`;
+    const credentialScope = `${date}/${this.region}/${this.service}/aws4_request`;
     
     return `AWS4-HMAC-SHA256 Credential=${this.accessKeyId}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
   }
@@ -158,11 +168,17 @@ export class AWSPollyService {
   /**
    * 生成语音音频
    * @param {string} text - 要转换的文本
+   * @param {AudioContext} audioContext - 音频上下文
    * @returns {Promise<{audioBuffer: AudioBuffer, duration: number}>}
    */
   async synthesizeSpeech(text, audioContext) {
     if (!this.isConfigured()) {
       throw new Error('AWS Polly 未配置或已禁用');
+    }
+
+    // 创建或验证音频上下文
+    if (!audioContext) {
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
     }
 
     if (!text || text.trim() === '') {
@@ -185,7 +201,6 @@ export class AWSPollyService {
 
       const headers = {
         'Content-Type': 'application/x-amz-json-1.0',
-        'X-Amz-Target': 'com.amazonaws.polly.service.Polly_20160610.SynthesizeSpeech',
         'Host': `polly.${this.config.region}.amazonaws.com`
       };
 
@@ -198,6 +213,14 @@ export class AWSPollyService {
       );
 
       headers['Authorization'] = authorization;
+
+      // 调试信息
+      console.log('Request details:', {
+        method: 'POST',
+        url: `${this.baseUrl}/v1/speech`,
+        headers: { ...headers },
+        bodyLength: requestBody.length
+      });
 
       const response = await fetch(`${this.baseUrl}/v1/speech`, {
         method: 'POST',
