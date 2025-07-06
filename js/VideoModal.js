@@ -84,9 +84,18 @@ const VideoModal = ({ isOpen, images, onClose }) => {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     
-    // 设置视频尺寸 (16:9)
-    canvas.width = 1280;
-    canvas.height = 720;
+    // 设置高清视频尺寸 (16:9) - 使用更高分辨率
+    const videoWidth = 1920;  // 提高到1080p
+    const videoHeight = 1080;
+    canvas.width = videoWidth;
+    canvas.height = videoHeight;
+    
+    // 设置画布渲染质量
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    
+    // 设置字体渲染质量
+    ctx.textRenderingOptimization = 'optimizeQuality';
     
     // 预先生成所有语音音频
     const speechData = [];
@@ -100,8 +109,8 @@ const VideoModal = ({ isOpen, images, onClose }) => {
       setProgress(10 + (i / images.length) * 40); // 10-50%用于语音生成
     }
     
-    // 创建视频流
-    const stream = canvas.captureStream(25); // 25fps
+    // 创建视频流 - 使用更高帧率
+    const stream = canvas.captureStream(30); // 30fps
     
     // 创建并添加音频轨道
     const audioTrack = await createMixedAudioTrack(speechData);
@@ -109,11 +118,23 @@ const VideoModal = ({ isOpen, images, onClose }) => {
       stream.addTrack(audioTrack);
     }
     
-    const mediaRecorder = new MediaRecorder(stream, {
-      mimeType: 'video/webm;codecs=vp8,opus',
-      videoBitsPerSecond: 2500000,
-      audioBitsPerSecond: 128000
-    });
+    // 检查VP9编码器支持，如果不支持则使用VP8
+    let mediaRecorderOptions = {
+      mimeType: 'video/webm;codecs=vp9,opus',
+      videoBitsPerSecond: 8000000,
+      audioBitsPerSecond: 192000
+    };
+    
+    if (!MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')) {
+      console.log('VP9编码器不支持，使用VP8');
+      mediaRecorderOptions = {
+        mimeType: 'video/webm;codecs=vp8,opus',
+        videoBitsPerSecond: 6000000,  // VP8使用稍低的比特率
+        audioBitsPerSecond: 192000
+      };
+    }
+    
+    const mediaRecorder = new MediaRecorder(stream, mediaRecorderOptions);
     
     const chunks = [];
     mediaRecorder.ondataavailable = (event) => {
@@ -226,9 +247,13 @@ const VideoModal = ({ isOpen, images, onClose }) => {
         // 加载图片
         const img = await loadImage(image);
         
-        // 清空画布
+        // 清空画布并设置高质量渲染
         ctx.fillStyle = '#000000';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // 确保图片渲染质量
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
         
         // 绘制图片
         const { x, y, width, height } = calculateImagePosition(img, canvas.width, canvas.height);
@@ -294,17 +319,23 @@ const VideoModal = ({ isOpen, images, onClose }) => {
   const drawCaption = (ctx, caption, canvasWidth, canvasHeight) => {
     ctx.save();
     
-    // 设置字体样式
-    ctx.font = 'bold 32px Arial, sans-serif';
+    // 设置高质量文字渲染
+    ctx.textRenderingOptimization = 'optimizeQuality';
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    
+    // 根据画布尺寸调整字体大小
+    const fontSize = Math.floor(canvasWidth / 30); // 动态字体大小
+    ctx.font = `bold ${fontSize}px Arial, "Microsoft YaHei", sans-serif`;
     ctx.fillStyle = '#ffffff';
     ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 2;
+    ctx.lineWidth = Math.max(2, fontSize / 16); // 动态描边宽度
     ctx.textAlign = 'center';
     ctx.textBaseline = 'bottom';
     
     // 文字位置
     const x = canvasWidth / 2;
-    const y = canvasHeight - 40;
+    const y = canvasHeight - Math.floor(canvasHeight / 18); // 动态位置
     
     // 绘制文字描边和填充
     ctx.strokeText(caption, x, y);
@@ -317,6 +348,10 @@ const VideoModal = ({ isOpen, images, onClose }) => {
   const loadImage = (imageData) => {
     return new Promise((resolve, reject) => {
       const img = new Image();
+      
+      // 设置图片质量相关属性
+      img.crossOrigin = 'anonymous';
+      
       img.onload = () => {
         // 清理临时 URL
         if (img.src.startsWith('blob:')) {
@@ -412,7 +447,7 @@ const VideoModal = ({ isOpen, images, onClose }) => {
                 </video>
                 <div class="mt-3">
                   <small class="text-muted">
-                    视频包含 ${images ? images.length : 0} 张图片，配有 Amazon Polly 中文语音
+                    高清视频（1080p）包含 ${images ? images.length : 0} 张图片，配有 Amazon Polly 中文语音
                   </small>
                 </div>
               </div>
