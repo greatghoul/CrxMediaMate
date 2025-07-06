@@ -6,7 +6,7 @@ import { pollyService } from './awsPollyService.js';
 // 视频生成模态框
 const VideoModal = ({ isOpen, images, onClose }) => {
   const [videoUrl, setVideoUrl] = useState('');
-  const [videoFormat, setVideoFormat] = useState('mp4');
+  const [videoFormat, setVideoFormat] = useState('webm');
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [audioContext, setAudioContext] = useState(null);
@@ -120,34 +120,31 @@ const VideoModal = ({ isOpen, images, onClose }) => {
     }
     setProgress(50);
     
-    // 检查H.264编码器支持，如果不支持则使用VP9/VP8
-    let mediaRecorderOptions = {
-      mimeType: 'video/mp4;codecs=h264,aac',
-      videoBitsPerSecond: 25000000,  // 25Mbps for 4K
-      audioBitsPerSecond: 320000     // 320kbps for high quality audio
-    };
+    // 检查WebM编码器支持 - 优先VP9，不支持则使用VP8
+    let mediaRecorderOptions;
+    let videoFormat = 'webm';
+    let blobType = 'video/webm';
     
-    let videoFormat = 'mp4';
-    let blobType = 'video/mp4';
-    
-    if (!MediaRecorder.isTypeSupported('video/mp4;codecs=h264,aac')) {
-      console.log('H.264编码器不支持，使用VP9');
+    if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')) {
+      console.log('使用WebM VP9格式录制');
       mediaRecorderOptions = {
         mimeType: 'video/webm;codecs=vp9,opus',
         videoBitsPerSecond: 25000000,  // 25Mbps for 4K
         audioBitsPerSecond: 320000
       };
-      videoFormat = 'webm';
-      blobType = 'video/webm';
-      
-      if (!MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')) {
-        console.log('VP9编码器不支持，使用VP8');
-        mediaRecorderOptions = {
-          mimeType: 'video/webm;codecs=vp8,opus',
-          videoBitsPerSecond: 20000000,  // 20Mbps for VP8 4K
-          audioBitsPerSecond: 320000
-        };
-      }
+    }
+    // 如果VP9不支持，尝试VP8
+    else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus')) {
+      console.log('VP9不支持，使用WebM VP8格式录制');
+      mediaRecorderOptions = {
+        mimeType: 'video/webm;codecs=vp8,opus',
+        videoBitsPerSecond: 20000000,  // 20Mbps for VP8 4K
+        audioBitsPerSecond: 320000
+      };
+    }
+    // 如果都不支持，抛出错误
+    else {
+      throw new Error('您的浏览器不支持WebM格式录制，请更新浏览器到最新版本');
     }
     
     const mediaRecorder = new MediaRecorder(stream, mediaRecorderOptions);
