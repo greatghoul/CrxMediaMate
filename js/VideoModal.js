@@ -84,13 +84,13 @@ const VideoModal = ({ isOpen, images, onClose }) => {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     
-    // 设置高清视频尺寸 (16:9) - 使用更高分辨率
-    const videoWidth = 1920;  // 提高到1080p
-    const videoHeight = 1080;
+    // 设置超高清视频尺寸 (16:9) - 使用4K分辨率
+    const videoWidth = 3840;   // 4K分辨率
+    const videoHeight = 2160;
     canvas.width = videoWidth;
     canvas.height = videoHeight;
     
-    // 设置画布渲染质量
+    // 设置画布高质量渲染（不使用DPR缩放，因为这是用于视频录制）
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
     
@@ -118,16 +118,16 @@ const VideoModal = ({ isOpen, images, onClose }) => {
     // 检查VP9编码器支持，如果不支持则使用VP8
     let mediaRecorderOptions = {
       mimeType: 'video/webm;codecs=vp9,opus',
-      videoBitsPerSecond: 8000000,
-      audioBitsPerSecond: 192000
+      videoBitsPerSecond: 25000000,  // 25Mbps for 4K
+      audioBitsPerSecond: 320000     // 320kbps for high quality audio
     };
     
     if (!MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')) {
       console.log('VP9编码器不支持，使用VP8');
       mediaRecorderOptions = {
         mimeType: 'video/webm;codecs=vp8,opus',
-        videoBitsPerSecond: 6000000,  // VP8使用稍低的比特率
-        audioBitsPerSecond: 192000
+        videoBitsPerSecond: 20000000,  // 20Mbps for VP8 4K
+        audioBitsPerSecond: 320000
       };
     }
     
@@ -244,17 +244,67 @@ const VideoModal = ({ isOpen, images, onClose }) => {
         // 加载图片
         const img = await loadImage(image);
         
-        // 清空画布并设置高质量渲染
+        // 清空画布并设置超高质量渲染
         ctx.fillStyle = '#000000';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         
-        // 确保图片渲染质量
+        // 设置最高质量图片渲染
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = 'high';
+        ctx.globalCompositeOperation = 'source-over';
         
-        // 绘制图片
+        // 绘制图片 - 使用最高质量算法
         const { x, y, width, height } = calculateImagePosition(img, canvas.width, canvas.height);
-        ctx.drawImage(img, x, y, width, height);
+        
+        // 如果图片需要缩放，使用多步缩放以提高质量
+        if (img.width > width || img.height > height) {
+          // 创建临时canvas进行高质量缩放
+          const tempCanvas = document.createElement('canvas');
+          const tempCtx = tempCanvas.getContext('2d');
+          
+          // 设置临时canvas尺寸
+          tempCanvas.width = width;
+          tempCanvas.height = height;
+          
+          // 高质量缩放设置
+          tempCtx.imageSmoothingEnabled = true;
+          tempCtx.imageSmoothingQuality = 'high';
+          
+          // 多步缩放算法
+          let currentWidth = img.width;
+          let currentHeight = img.height;
+          let currentCanvas = document.createElement('canvas');
+          let currentCtx = currentCanvas.getContext('2d');
+          
+          currentCanvas.width = currentWidth;
+          currentCanvas.height = currentHeight;
+          currentCtx.drawImage(img, 0, 0);
+          
+          // 逐步缩放到目标尺寸
+          while (currentWidth > width * 2 || currentHeight > height * 2) {
+            currentWidth = Math.max(width, currentWidth * 0.5);
+            currentHeight = Math.max(height, currentHeight * 0.5);
+            
+            const nextCanvas = document.createElement('canvas');
+            const nextCtx = nextCanvas.getContext('2d');
+            nextCanvas.width = currentWidth;
+            nextCanvas.height = currentHeight;
+            
+            nextCtx.imageSmoothingEnabled = true;
+            nextCtx.imageSmoothingQuality = 'high';
+            nextCtx.drawImage(currentCanvas, 0, 0, currentWidth, currentHeight);
+            
+            currentCanvas = nextCanvas;
+            currentCtx = nextCtx;
+          }
+          
+          // 最终绘制到目标canvas
+          tempCtx.drawImage(currentCanvas, 0, 0, width, height);
+          ctx.drawImage(tempCanvas, x, y);
+        } else {
+          // 直接绘制原图
+          ctx.drawImage(img, x, y, width, height);
+        }
         
         // 等待语音播放时间
         const displayDuration = speech.duration;
@@ -314,13 +364,19 @@ const VideoModal = ({ isOpen, images, onClose }) => {
       
       // 设置图片质量相关属性
       img.crossOrigin = 'anonymous';
+      img.decoding = 'sync';  // 同步解码以确保质量
       
       img.onload = () => {
-        // 清理临时 URL
-        if (img.src.startsWith('blob:')) {
-          URL.revokeObjectURL(img.src);
+        // 确保图片完全加载
+        if (img.complete && img.naturalWidth !== 0) {
+          // 清理临时 URL
+          if (img.src.startsWith('blob:')) {
+            URL.revokeObjectURL(img.src);
+          }
+          resolve(img);
+        } else {
+          reject(new Error('图片加载不完整'));
         }
-        resolve(img);
       };
       img.onerror = (error) => {
         console.error('图片加载失败:', error);
@@ -410,7 +466,7 @@ const VideoModal = ({ isOpen, images, onClose }) => {
                 </video>
                 <div class="mt-3">
                   <small class="text-muted">
-                    高清视频（1080p）包含 ${images ? images.length : 0} 张图片，配有 Amazon Polly 中文语音
+                    超高清视频（4K）包含 ${images ? images.length : 0} 张图片，配有 Amazon Polly 中文语音
                   </small>
                 </div>
               </div>
