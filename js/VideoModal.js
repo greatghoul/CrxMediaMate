@@ -182,8 +182,14 @@ const VideoModal = ({ isOpen, images, onClose }) => {
       // 加载背景音乐
       const backgroundMusic = await loadBackgroundMusic();
       
-      // 计算总时长
-      const totalDuration = speechDataArray.reduce((sum, speech) => sum + speech.duration, 0) / 1000;
+      // 计算总时长（包含转场时间）
+      const transitionDuration = 1000; // 转场时间1秒
+      let totalDuration = speechDataArray.reduce((sum, speech) => sum + speech.duration, 0) / 1000;
+      // 添加转场时间：从第二张图片开始每张都有淡入，除最后一张外每张都有淡出
+      if (speechDataArray.length > 1) {
+        totalDuration += ((speechDataArray.length - 1) * transitionDuration * 2) / 1000; // 淡入淡出
+        totalDuration -= transitionDuration / 1000; // 最后一张图片不需要淡出
+      }
       
       // 创建主音频缓冲区
       const sampleRate = currentAudioContext.sampleRate;
@@ -211,36 +217,81 @@ const VideoModal = ({ isOpen, images, onClose }) => {
         }
       }
       
-      // 混合语音音频（正常音量）
+      // 混合语音音频（正常音量）- 在转场期间添加静音
       let currentOffset = 0;
-      for (const speechData of speechDataArray) {
-        if (speechData.audioBuffer) {
-          const startSample = Math.floor(currentOffset * sampleRate / 1000);
-          
-          // 处理单声道或立体声
-          const sourceChannels = speechData.audioBuffer.numberOfChannels;
-          const sourceSampleRate = speechData.audioBuffer.sampleRate;
-          
-          for (let channel = 0; channel < 2; channel++) {
-            const mixedChannelData = mixedBuffer.getChannelData(channel);
-            const sourceChannelData = speechData.audioBuffer.getChannelData(
-              sourceChannels === 1 ? 0 : channel
-            );
+      const transitionMs = 1000; // 转场时间1秒
+      
+      for (let i = 0; i < speechDataArray.length; i++) {
+        const speechData = speechDataArray[i];
+        
+        // 第一张图片不需要淡入，直接播放音频
+        if (i === 0) {
+          if (speechData.audioBuffer) {
+            const startSample = Math.floor(currentOffset * sampleRate / 1000);
             
-            // 重采样（如果需要）
-            const sampleRateRatio = sourceSampleRate / sampleRate;
-            const sourceSamples = sourceChannelData.length;
-            const targetSamples = Math.floor(sourceSamples / sampleRateRatio);
+            // 处理单声道或立体声
+            const sourceChannels = speechData.audioBuffer.numberOfChannels;
+            const sourceSampleRate = speechData.audioBuffer.sampleRate;
             
-            for (let i = 0; i < targetSamples && (startSample + i) < mixedChannelData.length; i++) {
-              const sourceIndex = Math.floor(i * sampleRateRatio);
-              // 将语音音频叠加到背景音乐上
-              mixedChannelData[startSample + i] += sourceChannelData[sourceIndex];
+            for (let channel = 0; channel < 2; channel++) {
+              const mixedChannelData = mixedBuffer.getChannelData(channel);
+              const sourceChannelData = speechData.audioBuffer.getChannelData(
+                sourceChannels === 1 ? 0 : channel
+              );
+              
+              // 重采样（如果需要）
+              const sampleRateRatio = sourceSampleRate / sampleRate;
+              const sourceSamples = sourceChannelData.length;
+              const targetSamples = Math.floor(sourceSamples / sampleRateRatio);
+              
+              for (let j = 0; j < targetSamples && (startSample + j) < mixedChannelData.length; j++) {
+                const sourceIndex = Math.floor(j * sampleRateRatio);
+                // 将语音音频叠加到背景音乐上
+                mixedChannelData[startSample + j] += sourceChannelData[sourceIndex];
+              }
             }
           }
+          currentOffset += speechData.duration;
+        } else {
+          // 从第二张图片开始，需要考虑转场时间
+          // 先添加淡入静音时间
+          currentOffset += transitionMs;
+          
+          if (speechData.audioBuffer) {
+            const startSample = Math.floor(currentOffset * sampleRate / 1000);
+            
+            // 处理单声道或立体声
+            const sourceChannels = speechData.audioBuffer.numberOfChannels;
+            const sourceSampleRate = speechData.audioBuffer.sampleRate;
+            
+            for (let channel = 0; channel < 2; channel++) {
+              const mixedChannelData = mixedBuffer.getChannelData(channel);
+              const sourceChannelData = speechData.audioBuffer.getChannelData(
+                sourceChannels === 1 ? 0 : channel
+              );
+              
+              // 重采样（如果需要）
+              const sampleRateRatio = sourceSampleRate / sampleRate;
+              const sourceSamples = sourceChannelData.length;
+              const targetSamples = Math.floor(sourceSamples / sampleRateRatio);
+              
+              for (let j = 0; j < targetSamples && (startSample + j) < mixedChannelData.length; j++) {
+                const sourceIndex = Math.floor(j * sampleRateRatio);
+                // 将语音音频叠加到背景音乐上
+                mixedChannelData[startSample + j] += sourceChannelData[sourceIndex];
+              }
+            }
+          }
+          
+          // 音频播放时间（减去转场时间）
+          const audioPlayDuration = speechData.duration - transitionMs;
+          currentOffset += audioPlayDuration;
+          
+          // 如果不是最后一张图片，添加淡出静音时间
+          if (i < speechDataArray.length - 1) {
+            currentOffset += transitionMs;
+          }
         }
-        
-        currentOffset += speechData.duration;
       }
       
       // 创建音频源和目标
@@ -272,71 +323,8 @@ const VideoModal = ({ isOpen, images, onClose }) => {
         // 加载图片
         const img = await loadImage(image);
         
-        // 清空画布并设置超高质量渲染
-        ctx.fillStyle = '#000000';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        // 设置最高质量图片渲染
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = 'high';
-        ctx.globalCompositeOperation = 'source-over';
-        
-        // 绘制图片 - 使用最高质量算法
-        const { x, y, width, height } = calculateImagePosition(img, canvas.width, canvas.height);
-        
-        // 如果图片需要缩放，使用多步缩放以提高质量
-        if (img.width > width || img.height > height) {
-          // 创建临时canvas进行高质量缩放
-          const tempCanvas = document.createElement('canvas');
-          const tempCtx = tempCanvas.getContext('2d');
-          
-          // 设置临时canvas尺寸
-          tempCanvas.width = width;
-          tempCanvas.height = height;
-          
-          // 高质量缩放设置
-          tempCtx.imageSmoothingEnabled = true;
-          tempCtx.imageSmoothingQuality = 'high';
-          
-          // 多步缩放算法
-          let currentWidth = img.width;
-          let currentHeight = img.height;
-          let currentCanvas = document.createElement('canvas');
-          let currentCtx = currentCanvas.getContext('2d');
-          
-          currentCanvas.width = currentWidth;
-          currentCanvas.height = currentHeight;
-          currentCtx.drawImage(img, 0, 0);
-          
-          // 逐步缩放到目标尺寸
-          while (currentWidth > width * 2 || currentHeight > height * 2) {
-            currentWidth = Math.max(width, currentWidth * 0.5);
-            currentHeight = Math.max(height, currentHeight * 0.5);
-            
-            const nextCanvas = document.createElement('canvas');
-            const nextCtx = nextCanvas.getContext('2d');
-            nextCanvas.width = currentWidth;
-            nextCanvas.height = currentHeight;
-            
-            nextCtx.imageSmoothingEnabled = true;
-            nextCtx.imageSmoothingQuality = 'high';
-            nextCtx.drawImage(currentCanvas, 0, 0, currentWidth, currentHeight);
-            
-            currentCanvas = nextCanvas;
-            currentCtx = nextCtx;
-          }
-          
-          // 最终绘制到目标canvas
-          tempCtx.drawImage(currentCanvas, 0, 0, width, height);
-          ctx.drawImage(tempCanvas, x, y);
-        } else {
-          // 直接绘制原图
-          ctx.drawImage(img, x, y, width, height);
-        }
-        
-        // 等待语音播放时间
-        const displayDuration = speech.duration;
-        await new Promise(resolve => setTimeout(resolve, displayDuration));
+        // 渲染图片显示和过渡效果
+        await renderImageWithTransition(img, speech, canvas, ctx, i, images.length);
         
         // 更新进度
         setProgress(50 + ((i + 1) / images.length) * 50);
@@ -359,6 +347,134 @@ const VideoModal = ({ isOpen, images, onClose }) => {
     }
     
     onComplete();
+  };
+  
+  // 渲染单张图片和过渡效果
+  const renderImageWithTransition = async (img, speech, canvas, ctx, imageIndex, totalImages) => {
+    const { x, y, width, height } = calculateImagePosition(img, canvas.width, canvas.height);
+    const transitionDuration = 1000; // 过渡时间1秒
+    const frameRate = 30; // 30fps
+    const transitionFrames = Math.floor(transitionDuration / 1000 * frameRate);
+    
+    // 预渲染图片到临时canvas
+    const imageCanvas = await renderImageToCanvas(img, width, height);
+    
+    // 第一张图片无需淡入效果，直接显示
+    if (imageIndex === 0) {
+      // 直接显示第一张图片
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(imageCanvas, x, y);
+    } else {
+      // 淡入效果（从第二张图片开始）- 此时不播放音频
+      for (let frame = 0; frame < transitionFrames; frame++) {
+        const alpha = frame / transitionFrames; // 0到1的透明度
+        
+        // 清空画布
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // 绘制带透明度的图片
+        ctx.globalAlpha = alpha;
+        ctx.drawImage(imageCanvas, x, y);
+        ctx.globalAlpha = 1.0; // 重置透明度
+        
+        await new Promise(resolve => setTimeout(resolve, 1000 / frameRate));
+      }
+    }
+    
+    // 正常显示图片并播放音频
+    // 计算实际音频播放时间（减去转场时间）
+    const audioPlayDuration = speech.duration - (imageIndex < totalImages - 1 ? transitionDuration : 0); // 最后一张图片不需要淡出
+    const normalDisplayTime = Math.max(1000, audioPlayDuration); // 至少显示1秒
+    
+    // 确保图片正常显示
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(imageCanvas, x, y);
+    
+    // 等待音频播放完成（这里是纯等待，音频由混合轨道统一播放）
+    await new Promise(resolve => setTimeout(resolve, normalDisplayTime));
+    
+    // 淡出效果（除了最后一张图片）- 此时不播放音频
+    if (imageIndex < totalImages - 1) {
+      for (let frame = transitionFrames; frame >= 0; frame--) {
+        const alpha = frame / transitionFrames; // 1到0的透明度
+        
+        // 清空画布
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // 绘制带透明度的图片
+        ctx.globalAlpha = alpha;
+        ctx.drawImage(imageCanvas, x, y);
+        ctx.globalAlpha = 1.0; // 重置透明度
+        
+        await new Promise(resolve => setTimeout(resolve, 1000 / frameRate));
+      }
+    }
+  };
+  
+  // 将图片渲染到临时canvas（高质量缩放）
+  const renderImageToCanvas = async (img, targetWidth, targetHeight) => {
+    // 如果图片需要缩放，使用多步缩放以提高质量
+    if (img.width > targetWidth || img.height > targetHeight) {
+      // 创建临时canvas进行高质量缩放
+      const tempCanvas = document.createElement('canvas');
+      const tempCtx = tempCanvas.getContext('2d');
+      
+      // 设置临时canvas尺寸
+      tempCanvas.width = targetWidth;
+      tempCanvas.height = targetHeight;
+      
+      // 高质量缩放设置
+      tempCtx.imageSmoothingEnabled = true;
+      tempCtx.imageSmoothingQuality = 'high';
+      
+      // 多步缩放算法
+      let currentWidth = img.width;
+      let currentHeight = img.height;
+      let currentCanvas = document.createElement('canvas');
+      let currentCtx = currentCanvas.getContext('2d');
+      
+      currentCanvas.width = currentWidth;
+      currentCanvas.height = currentHeight;
+      currentCtx.drawImage(img, 0, 0);
+      
+      // 逐步缩放到目标尺寸
+      while (currentWidth > targetWidth * 2 || currentHeight > targetHeight * 2) {
+        currentWidth = Math.max(targetWidth, currentWidth * 0.5);
+        currentHeight = Math.max(targetHeight, currentHeight * 0.5);
+        
+        const nextCanvas = document.createElement('canvas');
+        const nextCtx = nextCanvas.getContext('2d');
+        nextCanvas.width = currentWidth;
+        nextCanvas.height = currentHeight;
+        
+        nextCtx.imageSmoothingEnabled = true;
+        nextCtx.imageSmoothingQuality = 'high';
+        nextCtx.drawImage(currentCanvas, 0, 0, currentWidth, currentHeight);
+        
+        currentCanvas = nextCanvas;
+        currentCtx = nextCtx;
+      }
+      
+      // 最终绘制到目标canvas
+      tempCtx.drawImage(currentCanvas, 0, 0, targetWidth, targetHeight);
+      return tempCanvas;
+    } else {
+      // 直接绘制原图到canvas
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = targetWidth;
+      canvas.height = targetHeight;
+      
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+      
+      return canvas;
+    }
   };
   
   // 计算图片位置（保持比例）
