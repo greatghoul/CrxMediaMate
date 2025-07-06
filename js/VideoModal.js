@@ -94,9 +94,6 @@ const VideoModal = ({ isOpen, images, onClose }) => {
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
     
-    // 设置字体渲染质量
-    ctx.textRenderingOptimization = 'optimizeQuality';
-    
     // 预先生成所有语音音频
     const speechData = [];
     setProgress(10);
@@ -259,11 +256,6 @@ const VideoModal = ({ isOpen, images, onClose }) => {
         const { x, y, width, height } = calculateImagePosition(img, canvas.width, canvas.height);
         ctx.drawImage(img, x, y, width, height);
         
-        // 绘制文字
-        if (image.caption) {
-          drawCaption(ctx, image.caption, canvas.width, canvas.height);
-        }
-        
         // 等待语音播放时间
         const displayDuration = speech.duration;
         await new Promise(resolve => setTimeout(resolve, displayDuration));
@@ -313,35 +305,6 @@ const VideoModal = ({ isOpen, images, onClose }) => {
     }
     
     return { x, y, width, height };
-  };
-  
-  // 绘制图片描述文字
-  const drawCaption = (ctx, caption, canvasWidth, canvasHeight) => {
-    ctx.save();
-    
-    // 设置高质量文字渲染
-    ctx.textRenderingOptimization = 'optimizeQuality';
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
-    
-    // 根据画布尺寸调整字体大小
-    const fontSize = Math.floor(canvasWidth / 30); // 动态字体大小
-    ctx.font = `bold ${fontSize}px Arial, "Microsoft YaHei", sans-serif`;
-    ctx.fillStyle = '#ffffff';
-    ctx.strokeStyle = '#000000';
-    ctx.lineWidth = Math.max(2, fontSize / 16); // 动态描边宽度
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'bottom';
-    
-    // 文字位置
-    const x = canvasWidth / 2;
-    const y = canvasHeight - Math.floor(canvasHeight / 18); // 动态位置
-    
-    // 绘制文字描边和填充
-    ctx.strokeText(caption, x, y);
-    ctx.fillText(caption, x, y);
-    
-    ctx.restore();
   };
   
   // 加载图片
