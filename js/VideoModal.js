@@ -6,6 +6,7 @@ import { pollyService } from './awsPollyService.js';
 // 视频生成模态框
 const VideoModal = ({ isOpen, images, onClose }) => {
   const [videoUrl, setVideoUrl] = useState('');
+  const [videoFormat, setVideoFormat] = useState('mp4');
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [audioContext, setAudioContext] = useState(null);
@@ -35,9 +36,10 @@ const VideoModal = ({ isOpen, images, onClose }) => {
     
     try {
       // 使用带语音的视频生成方法
-      const videoBlob = await createVideoFromImages(images);
-      const url = URL.createObjectURL(videoBlob);
+      const videoResult = await createVideoFromImages(images);
+      const url = URL.createObjectURL(videoResult.blob);
       setVideoUrl(url);
+      setVideoFormat(videoResult.format);
       setStatusMessage('');
     } catch (error) {
       console.error('视频生成失败:', error);
@@ -118,20 +120,34 @@ const VideoModal = ({ isOpen, images, onClose }) => {
     }
     setProgress(50);
     
-    // 检查VP9编码器支持，如果不支持则使用VP8
+    // 检查H.264编码器支持，如果不支持则使用VP9/VP8
     let mediaRecorderOptions = {
-      mimeType: 'video/webm;codecs=vp9,opus',
+      mimeType: 'video/mp4;codecs=h264,aac',
       videoBitsPerSecond: 25000000,  // 25Mbps for 4K
       audioBitsPerSecond: 320000     // 320kbps for high quality audio
     };
     
-    if (!MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')) {
-      console.log('VP9编码器不支持，使用VP8');
+    let videoFormat = 'mp4';
+    let blobType = 'video/mp4';
+    
+    if (!MediaRecorder.isTypeSupported('video/mp4;codecs=h264,aac')) {
+      console.log('H.264编码器不支持，使用VP9');
       mediaRecorderOptions = {
-        mimeType: 'video/webm;codecs=vp8,opus',
-        videoBitsPerSecond: 20000000,  // 20Mbps for VP8 4K
+        mimeType: 'video/webm;codecs=vp9,opus',
+        videoBitsPerSecond: 25000000,  // 25Mbps for 4K
         audioBitsPerSecond: 320000
       };
+      videoFormat = 'webm';
+      blobType = 'video/webm';
+      
+      if (!MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')) {
+        console.log('VP9编码器不支持，使用VP8');
+        mediaRecorderOptions = {
+          mimeType: 'video/webm;codecs=vp8,opus',
+          videoBitsPerSecond: 20000000,  // 20Mbps for VP8 4K
+          audioBitsPerSecond: 320000
+        };
+      }
     }
     
     const mediaRecorder = new MediaRecorder(stream, mediaRecorderOptions);
@@ -146,7 +162,8 @@ const VideoModal = ({ isOpen, images, onClose }) => {
     return new Promise((resolve, reject) => {
       mediaRecorder.onstop = () => {
         if (chunks.length > 0) {
-          resolve(new Blob(chunks, { type: 'video/webm' }));
+          const videoBlob = new Blob(chunks, { type: blobType });
+          resolve({ blob: videoBlob, format: videoFormat });
         } else {
           reject(new Error('No video data recorded'));
         }
@@ -587,9 +604,14 @@ const VideoModal = ({ isOpen, images, onClose }) => {
   const handleDownload = () => {
     if (!videoUrl) return;
     
+    // 生成带日期的文件名
+    const now = new Date();
+    const dateStr = now.toISOString().split('T')[0]; // YYYY-MM-DD格式
+    const fileName = `沙雕视频_${dateStr}.${videoFormat}`;
+    
     const a = document.createElement('a');
     a.href = videoUrl;
-    a.download = '沙雕视频.webm';
+    a.download = fileName;
     a.click();
   };
   
