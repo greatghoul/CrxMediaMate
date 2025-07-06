@@ -103,17 +103,20 @@ const VideoModal = ({ isOpen, images, onClose }) => {
       const image = images[i];
       const speech = await generateSpeechAudio(image.caption);
       speechData.push(speech);
-      setProgress(10 + (i / images.length) * 40); // 10-50%用于语音生成
+      setProgress(10 + (i / images.length) * 30); // 10-40%用于语音生成
     }
     
     // 创建视频流 - 使用更高帧率
     const stream = canvas.captureStream(30); // 30fps
     
-    // 创建并添加音频轨道
+    // 创建并添加音频轨道（包含背景音乐）
+    setStatusMessage('混合音频轨道...');
+    setProgress(40);
     const audioTrack = await createMixedAudioTrack(speechData);
     if (audioTrack) {
       stream.addTrack(audioTrack);
     }
+    setProgress(50);
     
     // 检查VP9编码器支持，如果不支持则使用VP8
     let mediaRecorderOptions = {
@@ -176,6 +179,9 @@ const VideoModal = ({ isOpen, images, onClose }) => {
         setAudioContext(currentAudioContext);
       }
       
+      // 加载背景音乐
+      const backgroundMusic = await loadBackgroundMusic();
+      
       // 计算总时长
       const totalDuration = speechDataArray.reduce((sum, speech) => sum + speech.duration, 0) / 1000;
       
@@ -184,7 +190,28 @@ const VideoModal = ({ isOpen, images, onClose }) => {
       const totalSamples = Math.ceil(totalDuration * sampleRate);
       const mixedBuffer = currentAudioContext.createBuffer(2, totalSamples, sampleRate); // 立体声
       
-      // 混合所有音频
+      // 先添加背景音乐（低音量）
+      if (backgroundMusic) {
+        const backgroundVolume = 0.15; // 15%音量，避免盖住语音
+        const musicDuration = backgroundMusic.duration;
+        
+        for (let channel = 0; channel < 2; channel++) {
+          const mixedChannelData = mixedBuffer.getChannelData(channel);
+          const musicChannelData = backgroundMusic.getChannelData(
+            backgroundMusic.numberOfChannels === 1 ? 0 : channel
+          );
+          
+          // 循环播放背景音乐直到视频结束
+          for (let i = 0; i < totalSamples; i++) {
+            const musicSampleIndex = Math.floor((i / sampleRate) % musicDuration * backgroundMusic.sampleRate);
+            if (musicSampleIndex < musicChannelData.length) {
+              mixedChannelData[i] = musicChannelData[musicSampleIndex] * backgroundVolume;
+            }
+          }
+        }
+      }
+      
+      // 混合语音音频（正常音量）
       let currentOffset = 0;
       for (const speechData of speechDataArray) {
         if (speechData.audioBuffer) {
@@ -207,7 +234,8 @@ const VideoModal = ({ isOpen, images, onClose }) => {
             
             for (let i = 0; i < targetSamples && (startSample + i) < mixedChannelData.length; i++) {
               const sourceIndex = Math.floor(i * sampleRateRatio);
-              mixedChannelData[startSample + i] = sourceChannelData[sourceIndex];
+              // 将语音音频叠加到背景音乐上
+              mixedChannelData[startSample + i] += sourceChannelData[sourceIndex];
             }
           }
         }
@@ -406,6 +434,26 @@ const VideoModal = ({ isOpen, images, onClose }) => {
     });
   };
   
+  // 加载背景音乐
+  const loadBackgroundMusic = async () => {
+    try {
+      // 确保音频上下文可用
+      let currentAudioContext = audioContext;
+      if (!currentAudioContext) {
+        currentAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+        setAudioContext(currentAudioContext);
+      }
+      
+      const response = await fetch('audios/cute-happy-kids.mp3');
+      const arrayBuffer = await response.arrayBuffer();
+      const audioBuffer = await currentAudioContext.decodeAudioData(arrayBuffer);
+      return audioBuffer;
+    } catch (error) {
+      console.error('加载背景音乐失败:', error);
+      return null;
+    }
+  };
+
   // 当模态框打开时生成视频
   useEffect(() => {
     if (isOpen) {
@@ -466,7 +514,7 @@ const VideoModal = ({ isOpen, images, onClose }) => {
                 </video>
                 <div class="mt-3">
                   <small class="text-muted">
-                    超高清视频（4K）包含 ${images ? images.length : 0} 张图片，配有 Amazon Polly 中文语音
+                    超高清视频（4K）包含 ${images ? images.length : 0} 张图片，配有 Amazon Polly 中文语音和背景音乐
                   </small>
                 </div>
               </div>
