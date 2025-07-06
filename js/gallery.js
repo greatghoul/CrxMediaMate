@@ -27,19 +27,19 @@ const Toolbar = ({ onAdd, onFilter, onSearch, selectedCount, onDeleteSelected, o
     <div class="toolbar fixed-top">
       <div class="container">
         <div class="row align-items-center">
-          <div class="col-md-3">
+          <div class="col-lg-2 col-md-3">
             <h4 class="mb-0">沙雕图 - 图片库</h4>
           </div>
-          <div class="col-md-4">
+          <div class="col-lg-6 col-md-5">
             <div class="bulk-actions">              <button 
-                class="btn btn-primary" 
+                class="btn btn-primary btn-sm" 
                 onClick=${onAdd}
               >
                 <i class="bi bi-plus"></i> 添加图片
               </button>
               <div class="custom-dropdown d-inline-block">
                 <button 
-                  class="btn btn-secondary" 
+                  class="btn btn-secondary btn-sm" 
                   type="button"
                   disabled=${selectedCount === 0}
                   onClick=${toggleDropdown}
@@ -55,14 +55,14 @@ const Toolbar = ({ onAdd, onFilter, onSearch, selectedCount, onDeleteSelected, o
                   </div>
                 `}
               </div>              <button 
-                class="btn btn-success" 
+                class="btn btn-success btn-sm" 
                 disabled=${selectedCount === 0}
                 onClick=${onGenerateArticle}
               >
                 生成文章
               </button>
               <button 
-                class="btn btn-info ms-2" 
+                class="btn btn-info btn-sm" 
                 disabled=${selectedCount === 0}
                 onClick=${onGenerateVideo}
               >
@@ -70,16 +70,16 @@ const Toolbar = ({ onAdd, onFilter, onSearch, selectedCount, onDeleteSelected, o
               </button>
             </div>
           </div>
-          <div class="col-md-5">
+          <div class="col-lg-4 col-md-4">
             <div class="d-flex justify-content-end">
-              <div class="input-group" style="max-width: 300px;">
+              <div class="input-group toolbar-search">
                 <input 
                   type="text" 
-                  class="form-control" 
+                  class="form-control form-control-sm" 
                   placeholder="搜索描述..." 
                   onChange=${e => onSearch(e.target.value)}
                 />                <select 
-                  class="form-select" 
+                  class="form-select form-select-sm" 
                   onChange=${e => onFilter(e.target.value)}
                   value=${filter}
                 >
