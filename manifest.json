@@ -20,23 +20,12 @@
       "16": "images/icon.png",
       "48": "images/icon.png",
       "128": "images/icon.png"
-    }
+    },
+    "default_title": "沙雕图库"
   },
   "icons": {
     "16": "images/icon.png",
     "48": "images/icon.png",
     "128": "images/icon.png"
-  },
-  "web_accessible_resources": [
-    {
-      "resources": [
-        "newtab.html",
-        "js/newtab.js",
-        "css/article.css"
-      ],
-      "matches": [
-        "<all_urls>"
-      ]
-    }
-  ]
+  }
 }

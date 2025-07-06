@@ -1,4 +1,5 @@
-import airtable from './airtable.js';
+// 导入 IndexedDB 服务
+import { IndexedDBService } from './indexedDBService.js';
 
 // Initialize context menu
 chrome.runtime.onInstalled.addListener(() => {
@@ -9,97 +10,82 @@ chrome.runtime.onInstalled.addListener(() => {
   });
 });
 
-// Handle extension icon click
+
+// 处理点击扩展图标事件
 chrome.action.onClicked.addListener((tab) => {
-  // Open a new tab with our newtab.html
-  const newTabUrl = chrome.runtime.getURL("newtab.html");
-  chrome.tabs.create({ url: newTabUrl });
+  // 在新标签页中打开图片库
+  const galleryUrl = chrome.runtime.getURL("gallery.html");
+  chrome.tabs.create({ url: galleryUrl });
 });
 
 // Handle context menu clicks
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId === "saveImage") {
-    // Open popup with the selected image
+    // Open popup with the selected image, centered on the screen
     const popupUrl = chrome.runtime.getURL("popup.html") + `?imageUrl=${encodeURIComponent(info.srcUrl)}`;
-    chrome.windows.create({
-      url: popupUrl,
-      type: "popup",
-      width: 500,
-      height: 600
+    // Get the current screen's width and height to center the popup
+    chrome.windows.getCurrent({}, (currentWindow) => {
+      const width = 500;
+      const height = 600;
+      // 计算窗口右侧距离 200 像素的位置
+      const left = Math.max(0, currentWindow.left + currentWindow.width - width - 200);
+      const top = Math.round(currentWindow.top + (currentWindow.height - height) / 2);
+      chrome.windows.create({
+        url: popupUrl,
+        type: "popup",
+        width,
+        height,
+        left,
+        top
+      });
     });
   }
 });
 
 // Handle messages from popup.js
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.action === "createRecord") {
-    createRecord(request.data, sendResponse)    
-  } else if (request.action === "queryRecords") {
-    queryRecords(sendResponse);
-  } else if (request.action === "finishRecords") {
-    finishRecords(request.recordIds, sendResponse)    
+  if (request.action === "saveToGallery") {
+    console.log("Received request to save image:", request.data);
+    // 直接保存到本地 IndexedDB
+    saveImageToIndexedDB(request.data)
+      .then(() => {
+        sendResponse({ success: true });
+      })
+      .catch((error) => {
+        console.error("Error saving to IndexedDB:", error);
+        sendResponse({ success: false, error: error.message });
+      });
+    
+    return true;
   }
-
-   return true;
 });
 
 
-async function queryRecords(sendResponse) {
+
+// 保存图片到 IndexedDB
+async function saveImageToIndexedDB(data) {
   try {
-    const records = await airtable.listRecords();
-    sendResponse({ success: true, records });
-  } catch (error) {
-    console.error("Error querying records:", error);
-    sendResponse({ success: false, error: error.message });
-  }
-}
-
-async function blobToBase64(blob) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => resolve(reader.result.split(',')[1]); // Get base64 part
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
-}
-
-async function createAttachment(imageUrl) {
-  try {
-    const response = await fetch(imageUrl);
-    const blob = await response.blob();
-    const contentType = response.headers.get('content-type') || blob.type || "image/png";
-    const filename = `image.${contentType.split('/')[1] || 'png'}`
-    const file = await blobToBase64(blob);
-
-    return { file, filename, contentType };
-  } catch (error) {
-    throw new Error("Failed to process image: " + error.message);
-  }
-}
-
-async function createRecord(data, sendResponse) {
-  try {
-    const image = await createAttachment(data.imageUrl);  
-    const recordId = await airtable.createRecord({ note: data.note });
-    await airtable.uploadImage({ recordId, image });
-    sendResponse({ success: true });
-  } catch (error) {
-    console.error("failed to create record: ", error);
-    sendResponse({ success: false, error: error.message });
-  }
-}
-
-// Function to update Airtable record status to "已发布"
-async function finishRecords(recordIds, sendResponse) {
-  try {
-    if (!Array.isArray(recordIds) || recordIds.length === 0) {
-      throw new Error("No record IDs provided");
+    // 如果传入的是 URL 而不是 Blob，先下载图片
+    let imageBlob = data.blob;
+    if (!imageBlob && data.imageUrl) {
+      const response = await fetch(data.imageUrl);
+      imageBlob = await response.blob();
     }
     
-    await airtable.finishRecords(recordIds);
-    sendResponse({ success: true });
-  } catch (e) {
-    console.error('Error finishing records:', e);
-    sendResponse({ success: false, error: e.message });
+    if (!imageBlob) {
+      throw new Error("No image data provided");
+    }
+    
+    // 保存到 IndexedDB
+    await IndexedDBService.addImage(
+      imageBlob,                 // 图片数据
+      data.note || "未命名",      // 描述
+      false                      // 默认未发布
+    );
+    
+    return true;
+  } catch (error) {
+    console.error("Error saving to IndexedDB:", error);
+    throw error;
   }
 }

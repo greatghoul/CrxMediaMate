@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AWS Polly 设置 - 沙雕图扩展</title>
+    <link href="css/bootstrap.css" rel="stylesheet">
+    <link href="css/popup.css" rel="stylesheet">
+    <style>
+        body {
+            min-width: 500px;
+            padding: 20px;
+        }
+        .settings-container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .form-label {
+            font-weight: 600;
+        }
+        .alert {
+            border-radius: 8px;
+        }
+        .test-button {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="settings-container">
+        <div class="d-flex align-items-center mb-4">
+            <h3 class="mb-0">AWS Polly 语音设置</h3>
+        </div>
+        
+        <div class="alert alert-info">
+            <h6 class="alert-heading">关于 Amazon Polly</h6>
+            <p class="mb-0">Amazon Polly 是 AWS 提供的文本转语音服务，可以生成高质量的中文语音。使用此功能需要 AWS 账户和相应的访问凭证。</p>
+        </div>
+
+        <form id="settingsForm">
+            <div class="mb-3">
+                <label for="region" class="form-label">AWS 区域</label>
+                <select class="form-select" id="region">
+                    <option value="us-east-1">US East (N. Virginia) - us-east-1</option>
+                    <option value="us-west-2">US West (Oregon) - us-west-2</option>
+                    <option value="ap-southeast-1">Asia Pacific (Singapore) - ap-southeast-1</option>
+                    <option value="ap-northeast-1">Asia Pacific (Tokyo) - ap-northeast-1</option>
+                    <option value="eu-west-1">Europe (Ireland) - eu-west-1</option>
+                </select>
+                <div class="form-text">选择离您最近的 AWS 区域以获得最佳性能</div>
+            </div>
+
+            <div class="mb-3">
+                <label for="accessKeyId" class="form-label">Access Key ID</label>
+                <input type="text" class="form-control" id="accessKeyId" placeholder="输入您的 AWS Access Key ID">
+                <div class="form-text">可在 AWS IAM 控制台中获取</div>
+            </div>
+
+            <div class="mb-3">
+                <label for="secretAccessKey" class="form-label">Secret Access Key</label>
+                <input type="password" class="form-control" id="secretAccessKey" placeholder="输入您的 AWS Secret Access Key">
+                <div class="form-text">请妥善保管，不要与他人分享</div>
+            </div>
+
+            <div class="mb-3">
+                <label for="voiceId" class="form-label">语音声音</label>
+                <select class="form-select" id="voiceId">
+                    <option value="Zhiyu">Zhiyu (中文女声，推荐)</option>
+                    <option value="Hiujin">Hiujin (中文女声)</option>
+                </select>
+                <div class="form-text">选择您喜欢的中文语音</div>
+            </div>
+
+            <div class="mb-3">
+                <button type="button" class="btn btn-outline-primary test-button" id="testButton">
+                    <span class="test-text">测试连接</span>
+                    <span class="spinner-border spinner-border-sm test-spinner d-none" role="status"></span>
+                </button>
+                <div class="form-text">测试 AWS 凭证是否正确配置</div>
+            </div>
+
+            <div id="testResult" class="alert d-none" role="alert"></div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">保存设置</button>
+                <button type="button" class="btn btn-secondary" id="backButton">返回</button>
+            </div>
+        </form>
+
+        <hr class="my-4">
+
+        <div class="alert alert-warning">
+            <h6 class="alert-heading">安全提示</h6>
+            <ul class="mb-0">
+                <li>请确保您的 AWS 账户已启用 Polly 服务</li>
+                <li>建议创建专门的 IAM 用户，只授予 Polly 相关权限</li>
+                <li>访问凭证存储在本地，不会上传到任何服务器</li>
+                <li>如果不使用此功能，系统会自动降级为浏览器内置 TTS</li>
+            </ul>
+        </div>
+    </div>
+
+    <script type="module" src="js/settings.js"></script>
+</body>
+</html>
