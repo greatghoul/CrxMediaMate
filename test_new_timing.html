@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>视频播放逻辑测试</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background-color: #f5f5f5;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .timing-info {
+      background-color: #e8f4f8;
+      padding: 15px;
+      border-radius: 5px;
+      margin-bottom: 20px;
+      border-left: 4px solid #2196F3;
+    }
+    .code-block {
+      background-color: #f8f8f8;
+      padding: 10px;
+      border-radius: 5px;
+      font-family: monospace;
+      font-size: 14px;
+      overflow-x: auto;
+    }
+    .timing-calculation {
+      background-color: #fff3cd;
+      padding: 15px;
+      border-radius: 5px;
+      margin: 10px 0;
+      border-left: 4px solid #ffc107;
+    }
+    .success {
+      background-color: #d4edda;
+      color: #155724;
+      border-color: #28a745;
+    }
+    .timeline {
+      background-color: #f8f9fa;
+      padding: 15px;
+      border-radius: 5px;
+      margin: 10px 0;
+    }
+    .timeline-item {
+      display: flex;
+      align-items: center;
+      margin: 5px 0;
+    }
+    .timeline-time {
+      width: 80px;
+      font-weight: bold;
+      color: #007bff;
+    }
+    .timeline-action {
+      flex: 1;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎬 视频播放逻辑测试验证</h1>
+    
+    <div class="timing-info">
+      <h3>📊 新的播放逻辑</h3>
+      <p><strong>要求:</strong> 必须是在切换到下一张图片之后，才开始播放对应的描述语音</p>
+      <p><strong>实现:</strong> 图片显示0.5秒后开始播放描述语音，播放完成后暂停0.5秒切换下一张图片</p>
+    </div>
+
+    <div class="timing-calculation success">
+      <h3>⏱️ 完整时间线</h3>
+      <div class="timeline">
+        <h4>第一张图片:</h4>
+        <div class="timeline-item">
+          <span class="timeline-time">0.0s</span>
+          <span class="timeline-action">➤ 图片1显示</span>
+        </div>
+        <div class="timeline-item">
+          <span class="timeline-time">0.5s</span>
+          <span class="timeline-action">🔊 开始播放图片1的描述语音</span>
+        </div>
+        <div class="timeline-item">
+          <span class="timeline-time">X.Xs</span>
+          <span class="timeline-action">🔇 图片1语音播放完成</span>
+        </div>
+        <div class="timeline-item">
+          <span class="timeline-time">+0.5s</span>
+          <span class="timeline-action">⏸️ 暂停0.5秒</span>
+        </div>
+        
+        <h4>第二张图片:</h4>
+        <div class="timeline-item">
+          <span class="timeline-time">Y.Ys</span>
+          <span class="timeline-action">➤ 图片2显示</span>
+        </div>
+        <div class="timeline-item">
+          <span class="timeline-time">+0.5s</span>
+          <span class="timeline-action">🔊 开始播放图片2的描述语音</span>
+        </div>
+        <div class="timeline-item">
+          <span class="timeline-time">Z.Zs</span>
+          <span class="timeline-action">🔇 图片2语音播放完成</span>
+        </div>
+        <div class="timeline-item">
+          <span class="timeline-time">+0.5s</span>
+          <span class="timeline-action">⏸️ 暂停0.5秒</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="timing-calculation">
+      <h3>🔧 技术实现</h3>
+      <div class="code-block">
+// 音频混合逻辑
+for (let i = 0; i < speechDataArray.length; i++) {
+  // 先静音0.5秒（图片显示期间）
+  currentOffset += imageShowDelayMs; // 500ms
+  
+  // 然后播放音频
+  const startSample = Math.floor(currentOffset * sampleRate / 1000);
+  addAudioToBuffer(mixedBuffer, speechData.audioBuffer, startSample);
+  
+  // 音频播放时间
+  currentOffset += speechData.duration;
+  
+  // 最后暂停0.5秒（除了最后一张图片）
+  if (i < speechDataArray.length - 1) {
+    currentOffset += pauseMs; // 500ms
+  }
+}
+
+// 图片渲染逻辑
+const renderImageWithTransition = async (img, speech, canvas, ctx, imageIndex, totalImages) => {
+  // 直接显示图片（无渐变效果）
+  ctx.drawImage(imageCanvas, x, y);
+  
+  // 图片显示0.5秒后，音频开始播放
+  await new Promise(resolve => setTimeout(resolve, imageShowDelay)); // 500ms
+  
+  // 等待音频播放完成
+  await new Promise(resolve => setTimeout(resolve, speech.duration));
+  
+  // 音频播放完成后暂停0.5秒再切换到下一张图片
+  if (imageIndex < totalImages - 1) {
+    await new Promise(resolve => setTimeout(resolve, pauseDuration)); // 500ms
+  }
+};
+      </div>
+    </div>
+
+    <div class="timing-calculation success">
+      <h3>✅ 关键改进</h3>
+      <ul>
+        <li><strong>图片优先显示:</strong> 图片立即显示，0.5秒后才开始播放语音</li>
+        <li><strong>音频严格同步:</strong> 音频轨道中为每张图片预留0.5秒静音时间</li>
+        <li><strong>无渐变切换:</strong> 图片之间直接切换，无过渡效果</li>
+        <li><strong>时间精确控制:</strong> 每个阶段都有精确的时间控制</li>
+      </ul>
+    </div>
+
+    <div class="timing-info">
+      <h3>📈 时间计算公式</h3>
+      <div class="code-block">
+每张图片总时长 = 图片显示延迟(0.5s) + 音频播放时长 + 暂停时间(0.5s)
+
+例如：
+- 图片1: 0.5s + 3.2s + 0.5s = 4.2s
+- 图片2: 0.5s + 2.8s + 0.5s = 3.8s  
+- 图片3: 0.5s + 4.1s + 0s = 4.6s (最后一张无暂停)
+
+总时长 = 4.2s + 3.8s + 4.6s = 12.6s
+      </div>
+    </div>
+
+    <script>
+      // 简单的时间计算演示
+      function calculateDetailedTiming() {
+        const images = [
+          {duration: 3200, description: "第一张搞笑图片"},
+          {duration: 2800, description: "第二张搞笑图片"},
+          {duration: 4100, description: "第三张搞笑图片"}
+        ];
+        
+        let currentTime = 0;
+        let totalDuration = 0;
+        
+        console.log("=== 详细视频时间轴 ===");
+        
+        images.forEach((img, index) => {
+          console.log(`${(currentTime/1000).toFixed(1)}s: ${img.description} 开始显示`);
+          
+          // 图片显示0.5秒
+          currentTime += 500;
+          totalDuration += 500;
+          console.log(`${(currentTime/1000).toFixed(1)}s: ${img.description} 音频开始播放`);
+          
+          // 音频播放时间
+          currentTime += img.duration;
+          totalDuration += img.duration;
+          console.log(`${(currentTime/1000).toFixed(1)}s: ${img.description} 音频播放完成`);
+          
+          // 暂停时间（除了最后一张）
+          if (index < images.length - 1) {
+            currentTime += 500;
+            totalDuration += 500;
+            console.log(`${(currentTime/1000).toFixed(1)}s: 暂停结束，准备切换下一张`);
+          }
+        });
+        
+        console.log(`总时长: ${totalDuration}ms (${(totalDuration/1000).toFixed(1)}秒)`);
+        
+        // 显示在页面上
+        const timingDiv = document.createElement('div');
+        timingDiv.className = 'timing-calculation success';
+        timingDiv.innerHTML = `
+          <h3>🎯 计算结果</h3>
+          <p><strong>总视频时长:</strong> ${(totalDuration/1000).toFixed(1)}秒</p>
+          <p><strong>图片数量:</strong> ${images.length}张</p>
+          <p><strong>图片显示延迟:</strong> ${images.length} × 0.5秒 = ${images.length * 0.5}秒</p>
+          <p><strong>暂停时间:</strong> ${images.length - 1} × 0.5秒 = ${(images.length - 1) * 0.5}秒</p>
+          <p><strong>总音频时长:</strong> ${(images.reduce((sum, img) => sum + img.duration, 0)/1000).toFixed(1)}秒</p>
+        `;
+        document.body.appendChild(timingDiv);
+      }
+      
+      // 页面加载后执行计算
+      window.addEventListener('load', calculateDetailedTiming);
+    </script>
+  </div>
+</body>
+</html>

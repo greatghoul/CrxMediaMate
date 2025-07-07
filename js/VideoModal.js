@@ -196,14 +196,20 @@ const VideoModal = ({ isOpen, images, onClose }) => {
       // 加载背景音乐
       const backgroundMusic = await loadBackgroundMusic();
       
-      // 计算总时长（包含转场时间）
-      const transitionDuration = 1000; // 转场时间1秒
-      let totalDuration = speechDataArray.reduce((sum, speech) => sum + speech.duration, 0) / 1000;
-      // 添加转场时间：从第二张图片开始每张都有淡入，除最后一张外每张都有淡出
-      if (speechDataArray.length > 1) {
-        totalDuration += ((speechDataArray.length - 1) * transitionDuration * 2) / 1000; // 淡入淡出
-        totalDuration -= transitionDuration / 1000; // 最后一张图片不需要淡出
+      // 计算总时长（图片显示0.5秒 + 音频播放时间 + 暂停0.5秒）
+      const imageShowDelay = 500; // 图片显示后延迟0.5秒再播放音频
+      const pauseDuration = 500; // 音频播放完成后的暂停时间：0.5秒
+      let totalDuration = 0;
+      
+      for (let i = 0; i < speechDataArray.length; i++) {
+        totalDuration += imageShowDelay; // 图片显示延迟时间
+        totalDuration += speechDataArray[i].duration; // 音频播放时间
+        if (i < speechDataArray.length - 1) {
+          totalDuration += pauseDuration; // 暂停时间（最后一张图片不需要）
+        }
       }
+      
+      totalDuration = totalDuration / 1000; // 转换为秒
       
       // 创建主音频缓冲区
       const sampleRate = currentAudioContext.sampleRate;
@@ -231,80 +237,50 @@ const VideoModal = ({ isOpen, images, onClose }) => {
         }
       }
       
-      // 混合语音音频（正常音量）- 在转场期间添加静音
+      // 混合语音音频（正常音量）- 先静音0.5秒，再播放音频，最后暂停0.5秒
       let currentOffset = 0;
-      const transitionMs = 1000; // 转场时间1秒
+      const imageShowDelayMs = 500; // 图片显示后延迟0.5秒再播放音频
+      const pauseMs = 500; // 暂停时间0.5秒
       
       for (let i = 0; i < speechDataArray.length; i++) {
         const speechData = speechDataArray[i];
         
-        // 第一张图片不需要淡入，直接播放音频
-        if (i === 0) {
-          if (speechData.audioBuffer) {
-            const startSample = Math.floor(currentOffset * sampleRate / 1000);
+        // 先静音0.5秒（图片显示期间）
+        currentOffset += imageShowDelayMs;
+        
+        // 播放音频
+        if (speechData.audioBuffer) {
+          const startSample = Math.floor(currentOffset * sampleRate / 1000);
+          
+          // 处理单声道或立体声
+          const sourceChannels = speechData.audioBuffer.numberOfChannels;
+          const sourceSampleRate = speechData.audioBuffer.sampleRate;
+          
+          for (let channel = 0; channel < 2; channel++) {
+            const mixedChannelData = mixedBuffer.getChannelData(channel);
+            const sourceChannelData = speechData.audioBuffer.getChannelData(
+              sourceChannels === 1 ? 0 : channel
+            );
             
-            // 处理单声道或立体声
-            const sourceChannels = speechData.audioBuffer.numberOfChannels;
-            const sourceSampleRate = speechData.audioBuffer.sampleRate;
+            // 重采样（如果需要）
+            const sampleRateRatio = sourceSampleRate / sampleRate;
+            const sourceSamples = sourceChannelData.length;
+            const targetSamples = Math.floor(sourceSamples / sampleRateRatio);
             
-            for (let channel = 0; channel < 2; channel++) {
-              const mixedChannelData = mixedBuffer.getChannelData(channel);
-              const sourceChannelData = speechData.audioBuffer.getChannelData(
-                sourceChannels === 1 ? 0 : channel
-              );
-              
-              // 重采样（如果需要）
-              const sampleRateRatio = sourceSampleRate / sampleRate;
-              const sourceSamples = sourceChannelData.length;
-              const targetSamples = Math.floor(sourceSamples / sampleRateRatio);
-              
-              for (let j = 0; j < targetSamples && (startSample + j) < mixedChannelData.length; j++) {
-                const sourceIndex = Math.floor(j * sampleRateRatio);
-                // 将语音音频叠加到背景音乐上
-                mixedChannelData[startSample + j] += sourceChannelData[sourceIndex];
-              }
+            for (let j = 0; j < targetSamples && (startSample + j) < mixedChannelData.length; j++) {
+              const sourceIndex = Math.floor(j * sampleRateRatio);
+              // 将语音音频叠加到背景音乐上
+              mixedChannelData[startSample + j] += sourceChannelData[sourceIndex];
             }
           }
-          currentOffset += speechData.duration;
-        } else {
-          // 从第二张图片开始，需要考虑转场时间
-          // 先添加淡入静音时间
-          currentOffset += transitionMs;
-          
-          if (speechData.audioBuffer) {
-            const startSample = Math.floor(currentOffset * sampleRate / 1000);
-            
-            // 处理单声道或立体声
-            const sourceChannels = speechData.audioBuffer.numberOfChannels;
-            const sourceSampleRate = speechData.audioBuffer.sampleRate;
-            
-            for (let channel = 0; channel < 2; channel++) {
-              const mixedChannelData = mixedBuffer.getChannelData(channel);
-              const sourceChannelData = speechData.audioBuffer.getChannelData(
-                sourceChannels === 1 ? 0 : channel
-              );
-              
-              // 重采样（如果需要）
-              const sampleRateRatio = sourceSampleRate / sampleRate;
-              const sourceSamples = sourceChannelData.length;
-              const targetSamples = Math.floor(sourceSamples / sampleRateRatio);
-              
-              for (let j = 0; j < targetSamples && (startSample + j) < mixedChannelData.length; j++) {
-                const sourceIndex = Math.floor(j * sampleRateRatio);
-                // 将语音音频叠加到背景音乐上
-                mixedChannelData[startSample + j] += sourceChannelData[sourceIndex];
-              }
-            }
-          }
-          
-          // 音频播放时间（减去转场时间）
-          const audioPlayDuration = speechData.duration - transitionMs;
-          currentOffset += audioPlayDuration;
-          
-          // 如果不是最后一张图片，添加淡出静音时间
-          if (i < speechDataArray.length - 1) {
-            currentOffset += transitionMs;
-          }
+        }
+        
+        // 更新偏移量：音频播放时间
+        currentOffset += speechData.duration;
+        
+        // 添加暂停时间（除了最后一张图片）
+        if (i < speechDataArray.length - 1) {
+          currentOffset += pauseMs;
         }
       }
       
@@ -363,69 +339,29 @@ const VideoModal = ({ isOpen, images, onClose }) => {
     onComplete();
   };
   
-  // 渲染单张图片和过渡效果
+  // 渲染单张图片 - 先显示图片0.5秒，然后播放音频，最后暂停0.5秒
   const renderImageWithTransition = async (img, speech, canvas, ctx, imageIndex, totalImages) => {
     const { x, y, width, height } = calculateImagePosition(img, canvas.width, canvas.height);
-    const transitionDuration = 1000; // 过渡时间1秒
-    const frameRate = 30; // 30fps
-    const transitionFrames = Math.floor(transitionDuration / 1000 * frameRate);
+    const imageShowDelay = 500; // 图片显示后延迟0.5秒再播放音频
+    const pauseDuration = 500; // 音频播放完成后的暂停时间：0.5秒
     
     // 预渲染图片到临时canvas
     const imageCanvas = await renderImageToCanvas(img, width, height);
     
-    // 第一张图片无需淡入效果，直接显示
-    if (imageIndex === 0) {
-      // 直接显示第一张图片
-      ctx.fillStyle = '#000000';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(imageCanvas, x, y);
-    } else {
-      // 淡入效果（从第二张图片开始）- 此时不播放音频
-      for (let frame = 0; frame < transitionFrames; frame++) {
-        const alpha = frame / transitionFrames; // 0到1的透明度
-        
-        // 清空画布
-        ctx.fillStyle = '#000000';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        // 绘制带透明度的图片
-        ctx.globalAlpha = alpha;
-        ctx.drawImage(imageCanvas, x, y);
-        ctx.globalAlpha = 1.0; // 重置透明度
-        
-        await new Promise(resolve => setTimeout(resolve, 1000 / frameRate));
-      }
-    }
-    
-    // 正常显示图片并播放音频
-    // 计算实际音频播放时间（减去转场时间）
-    const audioPlayDuration = speech.duration - (imageIndex < totalImages - 1 ? transitionDuration : 0); // 最后一张图片不需要淡出
-    const normalDisplayTime = Math.max(1000, audioPlayDuration); // 至少显示1秒
-    
-    // 确保图片正常显示
+    // 直接显示图片（无渐变效果）
     ctx.fillStyle = '#000000';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(imageCanvas, x, y);
     
-    // 等待音频播放完成（这里是纯等待，音频由混合轨道统一播放）
-    await new Promise(resolve => setTimeout(resolve, normalDisplayTime));
+    // 图片显示0.5秒后，音频开始播放（这里是纯等待，音频由混合轨道统一播放）
+    await new Promise(resolve => setTimeout(resolve, imageShowDelay));
     
-    // 淡出效果（除了最后一张图片）- 此时不播放音频
+    // 等待音频播放完成
+    await new Promise(resolve => setTimeout(resolve, speech.duration));
+    
+    // 音频播放完成后暂停0.5秒再切换到下一张图片（除了最后一张）
     if (imageIndex < totalImages - 1) {
-      for (let frame = transitionFrames; frame >= 0; frame--) {
-        const alpha = frame / transitionFrames; // 1到0的透明度
-        
-        // 清空画布
-        ctx.fillStyle = '#000000';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        // 绘制带透明度的图片
-        ctx.globalAlpha = alpha;
-        ctx.drawImage(imageCanvas, x, y);
-        ctx.globalAlpha = 1.0; // 重置透明度
-        
-        await new Promise(resolve => setTimeout(resolve, 1000 / frameRate));
-      }
+      await new Promise(resolve => setTimeout(resolve, pauseDuration));
     }
   };
   
@@ -649,7 +585,7 @@ const VideoModal = ({ isOpen, images, onClose }) => {
                 </video>
                 <div class="mt-3">
                   <small class="text-muted">
-                    超高清视频（4K）包含 ${images ? images.length : 0} 张图片，配有 Amazon Polly 中文语音和背景音乐
+                    超高清视频（4K）包含 ${images ? images.length : 0} 张图片，配有 Amazon Polly 中文语音和背景音乐。图片显示0.5秒后开始播放描述语音，播放完成后暂停0.5秒切换下一张图片。
                   </small>
                 </div>
               </div>
