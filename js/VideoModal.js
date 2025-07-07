@@ -11,6 +11,8 @@ const VideoModal = ({ isOpen, images, onClose }) => {
   const [progress, setProgress] = useState(0);
   const [audioContext, setAudioContext] = useState(null);
   const [statusMessage, setStatusMessage] = useState('');
+  const [videoOrientation, setVideoOrientation] = useState(''); // 'landscape' 或 'portrait'
+  const [showOrientationSelector, setShowOrientationSelector] = useState(false);
   
   // 初始化音频上下文
   useEffect(() => {
@@ -18,11 +20,30 @@ const VideoModal = ({ isOpen, images, onClose }) => {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
       setAudioContext(ctx);
     }
+    
+    // 当Modal打开时，重置状态并显示版式选择器
+    if (isOpen) {
+      setVideoOrientation('');
+      setShowOrientationSelector(true);
+      setVideoUrl('');
+      setLoading(false);
+      setProgress(0);
+      setStatusMessage('');
+    }
   }, [isOpen]);
   
+  // 处理版式选择
+  const handleOrientationSelect = (orientation) => {
+    setVideoOrientation(orientation);
+    setShowOrientationSelector(false);
+    // 选择完版式后开始生成视频
+    generateVideo(orientation);
+  };
+  
   // 生成视频
-  const generateVideo = async () => {
+  const generateVideo = async (orientation = videoOrientation) => {
     if (!images || images.length === 0) return;
+    if (!orientation) return; // 没有选择版式时不生成
     
     // 检查 Polly 配置
     if (!pollyService.isConfigured()) {
@@ -36,7 +57,7 @@ const VideoModal = ({ isOpen, images, onClose }) => {
     
     try {
       // 使用带语音的视频生成方法
-      const videoResult = await createVideoFromImages(images);
+      const videoResult = await createVideoFromImages(images, orientation);
       const url = URL.createObjectURL(videoResult.blob);
       setVideoUrl(url);
       setVideoFormat(videoResult.format);
@@ -82,13 +103,22 @@ const VideoModal = ({ isOpen, images, onClose }) => {
   };
   
   // 从图片创建视频（带语音）
-  const createVideoFromImages = async (images) => {
+  const createVideoFromImages = async (images, orientation) => {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     
-    // 设置超高清视频尺寸 (16:9) - 使用4K分辨率
-    const videoWidth = 3840;   // 4K分辨率
-    const videoHeight = 2160;
+    // 根据版式设置视频尺寸
+    let videoWidth, videoHeight;
+    if (orientation === 'portrait') {
+      // 竖版视频 (9:16) - 适合抖音
+      videoWidth = 1080;   // 1080p竖版
+      videoHeight = 1920;
+    } else {
+      // 横版视频 (16:9) - 使用4K分辨率
+      videoWidth = 3840;   // 4K分辨率
+      videoHeight = 2160;
+    }
+    
     canvas.width = videoWidth;
     canvas.height = videoHeight;
     
@@ -125,20 +155,25 @@ const VideoModal = ({ isOpen, images, onClose }) => {
     let videoFormat = 'webm';
     let blobType = 'video/webm';
     
+    // 根据版式调整码率
+    const isPortrait = orientation === 'portrait';
+    const vp9BitRate = isPortrait ? 15000000 : 25000000; // 竖版15Mbps，横版25Mbps
+    const vp8BitRate = isPortrait ? 12000000 : 20000000; // 竖版12Mbps，横版20Mbps
+    
     if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')) {
-      console.log('使用WebM VP9格式录制');
+      console.log(`使用WebM VP9格式录制 (${isPortrait ? '竖版' : '横版'})`);
       mediaRecorderOptions = {
         mimeType: 'video/webm;codecs=vp9,opus',
-        videoBitsPerSecond: 25000000,  // 25Mbps for 4K
+        videoBitsPerSecond: vp9BitRate,
         audioBitsPerSecond: 320000
       };
     }
     // 如果VP9不支持，尝试VP8
     else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus')) {
-      console.log('VP9不支持，使用WebM VP8格式录制');
+      console.log(`VP9不支持，使用WebM VP8格式录制 (${isPortrait ? '竖版' : '横版'})`);
       mediaRecorderOptions = {
         mimeType: 'video/webm;codecs=vp8,opus',
-        videoBitsPerSecond: 20000000,  // 20Mbps for VP8 4K
+        videoBitsPerSecond: vp8BitRate,
         audioBitsPerSecond: 320000
       };
     }
@@ -520,27 +555,26 @@ const VideoModal = ({ isOpen, images, onClose }) => {
     }
   };
 
-  // 当模态框打开时生成视频
+  // 当模态框关闭时清理资源
   useEffect(() => {
-    if (isOpen) {
-      generateVideo();
-    } else {
+    if (!isOpen) {
       // 关闭时释放URL
       if (videoUrl) {
         URL.revokeObjectURL(videoUrl);
         setVideoUrl('');
       }
     }
-  }, [isOpen]);
+  }, [isOpen, videoUrl]);
   
   // 下载视频
   const handleDownload = () => {
     if (!videoUrl) return;
     
-    // 生成带日期的文件名
+    // 生成带日期和版式的文件名
     const now = new Date();
     const dateStr = now.toISOString().split('T')[0]; // YYYY-MM-DD格式
-    const fileName = `沙雕视频_${dateStr}.${videoFormat}`;
+    const orientationStr = videoOrientation === 'portrait' ? '竖版' : '横版';
+    const fileName = `沙雕视频_${orientationStr}_${dateStr}.${videoFormat}`;
     
     const a = document.createElement('a');
     a.href = videoUrl;
@@ -555,11 +589,77 @@ const VideoModal = ({ isOpen, images, onClose }) => {
       <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title">生成的视频</h5>
+            <h5 class="modal-title">
+              ${showOrientationSelector ? '选择视频版式' : '生成的视频'}
+            </h5>
             <button type="button" class="btn-close" aria-label="Close" onClick=${onClose}></button>
           </div>
           <div class="modal-body">
-            ${loading ? html`
+            ${showOrientationSelector ? html`
+              <div class="text-center p-4">
+                <h6 class="mb-4">请选择视频版式</h6>
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <div class="card orientation-card" onClick=${() => handleOrientationSelect('landscape')}>
+                      <div class="card-body text-center">
+                        <div class="orientation-preview landscape mb-3">
+                          <div class="preview-frame">16:9</div>
+                        </div>
+                        <h6>横版视频</h6>
+                        <small class="text-muted">适合电脑和电视观看<br/>4K分辨率 (3840×2160)</small>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="card orientation-card" onClick=${() => handleOrientationSelect('portrait')}>
+                      <div class="card-body text-center">
+                        <div class="orientation-preview portrait mb-3">
+                          <div class="preview-frame">9:16</div>
+                        </div>
+                        <h6>竖版视频</h6>
+                        <small class="text-muted">适合抖音、快手等<br/>1080p分辨率 (1080×1920)</small>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <style>
+                  .orientation-card {
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                    border: 2px solid #e9ecef;
+                  }
+                  .orientation-card:hover {
+                    border-color: #007bff;
+                    box-shadow: 0 4px 12px rgba(0,123,255,0.15);
+                    transform: translateY(-2px);
+                  }
+                  .orientation-preview {
+                    width: 80px;
+                    height: 80px;
+                    margin: 0 auto;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    border: 2px solid #dee2e6;
+                    border-radius: 8px;
+                    background-color: #f8f9fa;
+                  }
+                  .orientation-preview.landscape {
+                    width: 80px;
+                    height: 45px;
+                  }
+                  .orientation-preview.portrait {
+                    width: 45px;
+                    height: 80px;
+                  }
+                  .preview-frame {
+                    font-size: 12px;
+                    font-weight: bold;
+                    color: #6c757d;
+                  }
+                </style>
+              </div>
+            ` : loading ? html`
               <div class="text-center p-5">
                 <div class="spinner-border text-primary" role="status">
                   <span class="visually-hidden">生成视频中...</span>
@@ -585,7 +685,7 @@ const VideoModal = ({ isOpen, images, onClose }) => {
                 </video>
                 <div class="mt-3">
                   <small class="text-muted">
-                    超高清视频（4K）包含 ${images ? images.length : 0} 张图片，配有 Amazon Polly 中文语音和背景音乐。图片显示0.5秒后开始播放描述语音，播放完成后暂停0.5秒切换下一张图片。
+                    ${videoOrientation === 'portrait' ? '竖版视频（9:16）' : '横版视频（16:9）'}包含 ${images ? images.length : 0} 张图片，配有 Amazon Polly 中文语音和背景音乐。图片显示0.5秒后开始播放描述语音，播放完成后暂停0.5秒切换下一张图片。
                   </small>
                 </div>
               </div>
