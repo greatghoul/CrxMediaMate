@@ -601,7 +601,7 @@ const VideoModal = ({ isOpen, images, onClose }) => {
                 <div class="row g-3">
                   <div class="col-md-6">
                     <div class="card orientation-card" onClick=${() => handleOrientationSelect('landscape')}>
-                      <div class="card-body text-center">
+                      <div class="card-body text-center d-flex flex-column justify-content-center h-100">
                         <div class="orientation-preview landscape mb-3">
                           <div class="preview-frame">16:9</div>
                         </div>
@@ -612,7 +612,7 @@ const VideoModal = ({ isOpen, images, onClose }) => {
                   </div>
                   <div class="col-md-6">
                     <div class="card orientation-card" onClick=${() => handleOrientationSelect('portrait')}>
-                      <div class="card-body text-center">
+                      <div class="card-body text-center d-flex flex-column justify-content-center h-100">
                         <div class="orientation-preview portrait mb-3">
                           <div class="preview-frame">9:16</div>
                         </div>
@@ -627,6 +627,7 @@ const VideoModal = ({ isOpen, images, onClose }) => {
                     cursor: pointer;
                     transition: all 0.3s ease;
                     border: 2px solid #e9ecef;
+                    height: 200px;
                   }
                   .orientation-card:hover {
                     border-color: #007bff;
