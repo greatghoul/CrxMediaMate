@@ -135,6 +135,8 @@ const SelectionControls = ({ onSelectAll, onDeselectAll, selectedCount, totalCou
 
 // 图片卡片组件
 const ImageCard = ({ image, selected, onSelect, onEdit, selectionOrder }) => {
+  const [imageOrientation, setImageOrientation] = useState(null); // 'landscape', 'portrait', 'square'
+
   const handleCardClick = (e) => {
     // 卡片点击切换选中状态
     onSelect(image.id, !selected);
@@ -144,8 +146,30 @@ const ImageCard = ({ image, selected, onSelect, onEdit, selectionOrder }) => {
     e.stopPropagation();
     onEdit(image.id);
   };
+  
   // 将 Blob 数据转换为 URL
   const imageUrl = URL.createObjectURL(image.imageData);
+  
+  // 检测图片尺寸和方向
+  useEffect(() => {
+    const img = new Image();
+    img.onload = () => {
+      const { width, height } = img;
+      if (width > height) {
+        setImageOrientation('landscape');
+      } else if (height > width) {
+        setImageOrientation('portrait');
+      } else {
+        setImageOrientation('square');
+      }
+    };
+    img.src = imageUrl;
+    
+    // 清理函数
+    return () => {
+      URL.revokeObjectURL(imageUrl);
+    };
+  }, [imageUrl]);
   
   // 检查图片创建日期是否为今天
   const isToday = () => {
@@ -162,6 +186,28 @@ const ImageCard = ({ image, selected, onSelect, onEdit, selectionOrder }) => {
   const formatDate = () => {
     const date = new Date(image.createdAt);
     return date.toLocaleDateString();
+  };
+  
+  // 渲染方向文字标识
+  const renderOrientationText = () => {
+    if (!imageOrientation) return null;
+    
+    switch (imageOrientation) {
+      case 'landscape':
+        return html`
+          <span class="badge bg-primary me-1" title="横屏图片">横</span>
+        `;
+      case 'portrait':
+        return html`
+          <span class="badge bg-secondary me-1" title="竖屏图片">竖</span>
+        `;
+      case 'square':
+        return html`
+          <span class="badge bg-success me-1" title="正方形图片">正</span>
+        `;
+      default:
+        return null;
+    }
   };
   
   return html`
@@ -188,9 +234,12 @@ const ImageCard = ({ image, selected, onSelect, onEdit, selectionOrder }) => {
                 </svg>
               </span>
             </div>
-            <small class=${isToday() ? "text-success fw-bold" : "text-muted"}>
-              ${isToday() ? '今天' : formatDate()}
-            </small>
+            <div class="d-flex align-items-center">
+              ${renderOrientationText()}
+              <small class=${isToday() ? "text-success fw-bold" : "text-muted"}>
+                ${isToday() ? '今天' : formatDate()}
+              </small>
+            </div>
           </div>
         </div>
       </div>

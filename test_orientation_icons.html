@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>测试图片方向文字标识功能</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background-color: #f5f5f5;
+    }
+    .test-section {
+      background: white;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .orientation-text {
+      font-size: 10px;
+      font-weight: bold;
+      padding: 1px 4px;
+      border-radius: 2px;
+      vertical-align: middle;
+      line-height: 1;
+    }
+    .orientation-landscape {
+      background-color: #e3f2fd;
+      color: #1976d2;
+    }
+    .orientation-portrait {
+      background-color: #f3e5f5;
+      color: #7b1fa2;
+    }
+    .orientation-square {
+      background-color: #e8f5e8;
+      color: #388e3c;
+    }
+    .me-1 {
+      margin-right: 0.25rem;
+    }
+    .test-item {
+      display: flex;
+      align-items: center;
+      padding: 10px;
+      margin: 5px 0;
+      background: #f8f9fa;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <h1>图片方向文字标识功能测试</h1>
+  
+  <div class="test-section">
+    <h2>功能说明</h2>
+    <p>在 gallery 页面的图片卡片上，根据图片的尺寸自动显示对应的方向文字标识：</p>
+    <ul>
+      <li><strong>"横"</strong>：当图片宽度 > 高度时显示（蓝色背景）</li>
+      <li><strong>"竖"</strong>：当图片高度 > 宽度时显示（紫色背景）</li>
+      <li><strong>"正"</strong>：当图片宽度 = 高度时显示（绿色背景）</li>
+    </ul>
+  </div>
+  
+  <div class="test-section">
+    <h2>文字标识预览</h2>
+    <div class="test-item">
+      <span class="orientation-text orientation-landscape me-1" title="横屏图片">横</span>
+      <span>横屏标识 - 用于宽度大于高度的图片（蓝色背景）</span>
+    </div>
+    
+    <div class="test-item">
+      <span class="orientation-text orientation-portrait me-1" title="竖屏图片">竖</span>
+      <span>竖屏标识 - 用于高度大于宽度的图片（紫色背景）</span>
+    </div>
+    
+    <div class="test-item">
+      <span class="orientation-text orientation-square me-1" title="正方形图片">正</span>
+      <span>正方形标识 - 用于宽度等于高度的图片（绿色背景）</span>
+    </div>
+  </div>
+  
+  <div class="test-section">
+    <h2>颜色方案</h2>
+    <ul>
+      <li><strong>横屏（横）</strong>：蓝色系 (#e3f2fd 背景，#1976d2 文字)</li>
+      <li><strong>竖屏（竖）</strong>：紫色系 (#f3e5f5 背景，#7b1fa2 文字)</li>
+      <li><strong>正方形（正）</strong>：绿色系 (#e8f5e8 背景，#388e3c 文字)</li>
+    </ul>
+  </div>
+  
+  <div class="test-section">
+    <h2>实现细节</h2>
+    <ul>
+      <li>文字标识显示在日期信息的左边</li>
+      <li>使用小号字体（10px）和圆角背景</li>
+      <li>不同方向使用不同的颜色主题</li>
+      <li>自动检测图片尺寸并判断方向</li>
+      <li>通过 useEffect 在图片加载完成后检测尺寸</li>
+      <li>支持鼠标悬停时显示详细提示文字</li>
+    </ul>
+  </div>
+  
+  <div class="test-section">
+    <h2>修改的文件</h2>
+    <ul>
+      <li><strong>js/gallery.js</strong>：将图标渲染改为文字标识渲染</li>
+      <li><strong>css/gallery.css</strong>：更新样式为文字标识样式，添加颜色主题</li>
+    </ul>
+  </div>
+  
+  <div class="test-section">
+    <h2>测试步骤</h2>
+    <ol>
+      <li>在 Chrome 浏览器中加载扩展</li>
+      <li>上传不同尺寸的图片到图片库</li>
+      <li>观察图片卡片上是否显示正确的方向文字标识</li>
+      <li>检查文字标识是否显示在日期左边</li>
+      <li>验证不同方向的颜色是否正确</li>
+      <li>验证鼠标悬停提示是否正常</li>
+    </ol>
+  </div>
+</body>
+</html>
