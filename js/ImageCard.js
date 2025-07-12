@@ -80,7 +80,7 @@ const ImageCard = ({ image, selected, onSelect, onEdit, selectionOrder }) => {
   };
   
   return html`
-    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6 col-xs-12 mb-4">
+    <div class="col-12 col-sm-6 col-md-3 col-lg-3 col-xl-3 mb-4">
       <div class=${`image-card ${selected ? 'selected' : ''}`} onClick=${handleCardClick}>
         ${selected && html`
           <div class="card-selected-icon">
