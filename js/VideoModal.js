@@ -387,17 +387,12 @@ const VideoModal = ({ isOpen, images, onClose }) => {
     ctx.fillStyle = '#000000';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(imageCanvas, x, y);
-    
-    // 图片显示0.5秒后，音频开始播放（这里是纯等待，音频由混合轨道统一播放）
+    // 1. 图片显示0.5秒
     await new Promise(resolve => setTimeout(resolve, imageShowDelay));
-    
-    // 等待音频播放完成
+    // 2. 播放音频（音频由混合轨道统一播放，这里只等待音频时长）
     await new Promise(resolve => setTimeout(resolve, speech.duration));
-    
-    // 音频播放完成后暂停0.5秒再切换到下一张图片（除了最后一张）
-    if (imageIndex < totalImages - 1) {
-      await new Promise(resolve => setTimeout(resolve, pauseDuration));
-    }
+    // 3. 音频结束后再暂停0.5秒，无论是否最后一张图片
+    await new Promise(resolve => setTimeout(resolve, pauseDuration));
   };
   
   // 将图片渲染到临时canvas（高质量缩放）
