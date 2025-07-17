@@ -5,11 +5,8 @@
  * settings.js should not be committed to your git repository
  */
 
-// Notion API Token from https://www.notion.so/my-integrations
-export const notionToken = "your-notion-token-here";
-
-// ImgBB API Key from https://api.imgbb.com/
-export const imgbbApiKey = "your-imgbb-api-key-here";
+// 是否启用文字转语音功能（用于决定在生成视频时，是否对图片对应的描述文字进行配音）
+export const ttsEnabled = false;
 
 // AWS Polly Configuration for Text-to-Speech
 export const awsAccessKeyId = "your-aws-access-key-id-here";

@@ -2,6 +2,7 @@
 
 import { html, useState, useEffect } from './preact.js';
 import { pollyService } from './awsPollyService.js';
+import { ttsEnabled } from './settings.js';
 
 // 视频生成模态框
 const VideoModal = ({ isOpen, images, onClose }) => {
@@ -45,8 +46,8 @@ const VideoModal = ({ isOpen, images, onClose }) => {
     if (!images || images.length === 0) return;
     if (!orientation) return; // 没有选择版式时不生成
     
-    // 检查 Polly 配置
-    if (!pollyService.isConfigured()) {
+    // 检查 Polly 配置（仅当启用了TTS时才检查）
+    if (ttsEnabled && !pollyService.isConfigured()) {
       alert('Amazon Polly 未配置，请在 settings.js 中设置 AWS 凭证（awsAccessKeyId 和 awsSecretAccessKey）');
       return;
     }
@@ -76,7 +77,7 @@ const VideoModal = ({ isOpen, images, onClose }) => {
     }
   };
   
-  // 生成语音音频（始终使用 Amazon Polly）
+  // 生成语音音频（如果启用了TTS则使用 Amazon Polly，否则返回静音）
   const generateSpeechAudio = async (text) => {
     // 确保音频上下文可用
     let currentAudioContext = audioContext;
@@ -85,9 +86,9 @@ const VideoModal = ({ isOpen, images, onClose }) => {
       setAudioContext(currentAudioContext);
     }
     
-    if (!text || text.trim() === '') {
-      // 返回3秒静音
-      const duration = 3;
+    if (!ttsEnabled || !text || text.trim() === '') {
+      // 如果TTS禁用或文本为空，返回5秒静音
+      const duration = ttsEnabled ? 3 : 5; // 禁用TTS时使用5秒固定时长
       const sampleRate = currentAudioContext.sampleRate;
       const buffer = currentAudioContext.createBuffer(1, duration * sampleRate, sampleRate);
       return { audioBuffer: buffer, duration: duration * 1000 };
@@ -129,7 +130,7 @@ const VideoModal = ({ isOpen, images, onClose }) => {
     // 预先生成所有语音音频
     const speechData = [];
     setProgress(10);
-    setStatusMessage('生成语音音频...');
+    setStatusMessage(ttsEnabled ? '生成语音音频...' : '准备视频...');
     
     for (let i = 0; i < images.length; i++) {
       const image = images[i];
@@ -369,11 +370,11 @@ const VideoModal = ({ isOpen, images, onClose }) => {
     onComplete();
   };
   
-  // 渲染单张图片 - 先显示图片0.5秒，然后播放音频，最后暂停0.5秒
+  // 渲染单张图片 - 如果启用TTS则先显示图片0.5秒，然后播放音频，最后暂停0.5秒；否则固定显示5秒
   const renderImageWithTransition = async (img, speech, canvas, ctx, imageIndex, totalImages) => {
     const { x, y, width, height } = calculateImagePosition(img, canvas.width, canvas.height);
-    const imageShowDelay = 500; // 图片显示后延迟0.5秒再播放音频
-    const pauseDuration = 500; // 音频播放完成后的暂停时间：0.5秒
+    const imageShowDelay = ttsEnabled ? 500 : 0; // 启用TTS时图片显示后延迟0.5秒再播放音频
+    const pauseDuration = ttsEnabled ? 500 : 0; // 启用TTS时音频播放完成后的暂停时间：0.5秒
     
     // 预渲染图片到临时canvas
     const imageCanvas = await renderImageToCanvas(img, width, height);
@@ -382,12 +383,19 @@ const VideoModal = ({ isOpen, images, onClose }) => {
     ctx.fillStyle = '#000000';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(imageCanvas, x, y);
-    // 1. 图片显示0.5秒
-    await new Promise(resolve => setTimeout(resolve, imageShowDelay));
-    // 2. 播放音频（音频由混合轨道统一播放，这里只等待音频时长）
-    await new Promise(resolve => setTimeout(resolve, speech.duration));
-    // 3. 音频结束后再暂停0.5秒，无论是否最后一张图片
-    await new Promise(resolve => setTimeout(resolve, pauseDuration));
+    
+    if (ttsEnabled) {
+      // TTS 启用模式
+      // 1. 图片显示0.5秒
+      await new Promise(resolve => setTimeout(resolve, imageShowDelay));
+      // 2. 播放音频（音频由混合轨道统一播放，这里只等待音频时长）
+      await new Promise(resolve => setTimeout(resolve, speech.duration));
+      // 3. 音频结束后再暂停0.5秒，无论是否最后一张图片
+      await new Promise(resolve => setTimeout(resolve, pauseDuration));
+    } else {
+      // TTS 禁用模式 - 图片固定显示5秒
+      await new Promise(resolve => setTimeout(resolve, 5000));
+    }
   };
   
   // 将图片渲染到临时canvas（高质量缩放）
@@ -676,7 +684,7 @@ const VideoModal = ({ isOpen, images, onClose }) => {
                 </video>
                 <div class="mt-3">
                   <small class="text-muted">
-                    ${videoOrientation === 'portrait' ? '竖版视频（9:16）' : '横版视频（16:9）'}包含 ${images ? images.length : 0} 张图片，配有 Amazon Polly 中文语音和背景音乐。图片显示0.5秒后开始播放描述语音，播放完成后暂停0.5秒切换下一张图片。
+                    ${videoOrientation === 'portrait' ? '竖版视频（9:16）' : '横版视频（16:9）'}包含 ${images ? images.length : 0} 张图片${ttsEnabled ? '，配有 Amazon Polly 中文语音和背景音乐。图片显示0.5秒后开始播放描述语音，播放完成后暂停0.5秒切换下一张图片。' : '和背景音乐，每张图片显示5秒。'}
                   </small>
                 </div>
               </div>
