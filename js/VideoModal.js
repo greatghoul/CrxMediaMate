@@ -572,7 +572,7 @@ const VideoModal = ({ isOpen, images, onClose }) => {
     const now = new Date();
     const dateStr = now.toISOString().split('T')[0]; // YYYY-MM-DD格式
     const orientationStr = videoOrientation === 'portrait' ? '竖版' : '横版';
-    const fileName = `沙雕视频_${orientationStr}_${dateStr}.${videoFormat}`;
+    const fileName = `视频_${orientationStr}_${dateStr}.${videoFormat}`;
     
     const a = document.createElement('a');
     a.href = videoUrl;

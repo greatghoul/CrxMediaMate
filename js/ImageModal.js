@@ -156,7 +156,7 @@ const ImageModal = ({ isOpen, image, onClose, onSave }) => {
                   rows="3"
                   value=${caption}
                   onChange=${e => setCaption(e.target.value)}
-                  placeholder="添加关于这个沙雕图的描述..." 
+                  placeholder="添加关于这个图片的备注..." 
                   required
                 ></textarea>
               </div>

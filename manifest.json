@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "沙雕图",
+  "name": "图片素材管家",
   "version": "1.0",
-  "description": "收集沙雕图片并添加笔记",
+  "description": "收集管理图片素材，支持备注以及生成文章和视频",
   "permissions": [
     "contextMenus",
     "storage",
@@ -21,7 +21,7 @@
       "48": "images/icon.png",
       "128": "images/icon.png"
     },
-    "default_title": "沙雕图库"
+    "default_title": "图片素材管家"
   },
   "icons": {
     "16": "images/icon.png",

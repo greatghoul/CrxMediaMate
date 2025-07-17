@@ -5,7 +5,7 @@ import { IndexedDBService } from './indexedDBService.js';
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
     id: "saveImage",
-    title: "保存沙雕图",
+    title: "保存图片素材",
     contexts: ["image"]
   });
 });

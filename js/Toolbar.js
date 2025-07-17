@@ -26,7 +26,7 @@ const Toolbar = ({ onAdd, onFilter, onSearch, selectedCount, onDeleteSelected, o
       <div class="container">
         <div class="row align-items-center">
           <div class="col-lg-2 col-md-3">
-            <h4 class="mb-0">沙雕图 - 图片库</h4>
+            <h4 class="mb-0">图片素材管家</h4>
           </div>
           <div class="col-lg-6 col-md-5">
             <div class="bulk-actions">              <button 

@@ -1,4 +1,4 @@
-// gallery.js - 使用 Preact 实现的沙雕图片库主组件
+// gallery.js - 使用 Preact 实现图片库主组件
 
 import { html, render, useState, useEffect } from './preact.js';
 import { IndexedDBService } from './indexedDBService.js';
