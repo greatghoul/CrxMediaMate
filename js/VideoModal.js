@@ -237,11 +237,8 @@ const VideoModal = ({ isOpen, images, onClose }) => {
       let totalDuration = 0;
       
       for (let i = 0; i < speechDataArray.length; i++) {
-        totalDuration += imageShowDelay; // 图片显示延迟时间
-        totalDuration += speechDataArray[i].duration; // 音频播放时间
-        if (i < speechDataArray.length - 1) {
-          totalDuration += pauseDuration; // 暂停时间（最后一张图片不需要）
-        }
+        // 对每个图片：显示延迟(0.5秒) + 音频时间 + 暂停时间(0.5秒)
+        totalDuration += imageShowDelay + speechDataArray[i].duration + pauseDuration;
       }
       
       totalDuration = totalDuration / 1000; // 转换为秒
@@ -313,10 +310,8 @@ const VideoModal = ({ isOpen, images, onClose }) => {
         // 更新偏移量：音频播放时间
         currentOffset += speechData.duration;
         
-        // 添加暂停时间（除了最后一张图片）
-        if (i < speechDataArray.length - 1) {
-          currentOffset += pauseMs;
-        }
+        // 添加暂停时间
+        currentOffset += pauseMs;
       }
       
       // 创建音频源和目标
