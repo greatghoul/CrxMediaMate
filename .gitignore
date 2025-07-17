@@ -1,5 +1,5 @@
 # Sensitive configuration
-js/settings.js
+app/js/settings.js
 
 # Other common files to ignore
 node_modules/
