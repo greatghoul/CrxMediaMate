@@ -12,6 +12,11 @@
 - 选择图片生成视频（支持备注配音）
 - 图文完全在本地保存和管理
 
+## 应用截图
+
+![gallery](./screenshots/gallery.png)
+![generator](./screenshots/generator.png)
+
 ## 安装方法
 
 1. 下载或克隆本项目到本地  
