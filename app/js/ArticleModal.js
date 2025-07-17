@@ -1,6 +1,7 @@
 // ArticleModal.js - 文章生成模态框组件
 
 import { html, useState, useEffect } from './preact.js';
+import { articleHeadParagraph, articleTailParagraph } from './settings.js';
 
 // 文章生成模态框
 const ArticleModal = ({ isOpen, images, onClose }) => {
@@ -38,7 +39,10 @@ const ArticleModal = ({ isOpen, images, onClose }) => {
     let content = '';
     
     // 添加开头鼓励性段落
-    content += '<p>搞笑图，让生活充满欢乐！每天看一看搞笑图，心情愉快一整天。</p>';
+    if (articleHeadParagraph) {
+      content += articleHeadParagraph;
+    }
+    // content += ;
     
     // 添加每个图片及其描述
     for (let i = 0; i < images.length; i++) {
@@ -52,7 +56,9 @@ const ArticleModal = ({ isOpen, images, onClose }) => {
     }
     
     // 添加结尾鼓励性段落
-    content += '<p>搞笑图不仅能带给我们欢笑，还能帮助我们减轻压力，放松身心。赶紧收藏并分享这些有趣的搞笑图吧！</p>';
+    if (articleTailParagraph) {
+      content += articleTailParagraph;
+    }
     
     setArticleContent(content);
     setLoading(false);
