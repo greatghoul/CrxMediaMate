@@ -17,6 +17,9 @@
 ![gallery](./screenshots/gallery.png)
 ![generator](./screenshots/generator.png)
 
+> [!NOTE]  
+> 这个扩展最初是为了方便发布沙雕图的今日头条而开发的, 不过似乎没有什么流量，如果想要预览生成视频和文章的效果，欢迎去我的今日头条[开心团子](https://www.toutiao.com/c/user/token/MS4wLjABAAAA0KWOA0eO3n6L55viV0N43QnxivKLqdSqIhU7MOPu1Lw/)看看，当然也欢迎关注呀。
+
 ## 安装方法
 
 1. 下载或克隆本项目到本地  
