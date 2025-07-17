@@ -1,39 +1,29 @@
-# 沙雕图 Chrome Extension
+# 自媒体图片素材管理助手
 
-A Chrome extension that allows you to collect funny images with notes using the context menu.
+这是一个 Chrome 扩展，允许您通过右键菜单收集图片素材并添加备注，在管理器中，可以选择图片并生成图文文章和视频。
 
-## Features
+## 功能特点
 
-- Right-click context menu on images
-- Save images with custom notes
-- Copy to clipboard functionality
-- 400x600 popup window with image preview
+- 图片上的右键菜单
+- 保存图片并添加自定义备注
+- 选择图片生成图文
+- 选择图片生成视频（支持备注配音）
+- 图文完全在本地保存和管理
 
-## Installation
+## 安装方法
 
-1. Open Chrome and navigate to `chrome://extensions/`
-2. Enable "Developer mode" in the top right corner
-3. Click "Load unpacked" and select this directory
-4. The extension should now be installed and ready to use
+1. 下载或克隆本项目到本地  
+2. 在项目目录下，复制 `js/settings.js.example` 为 `js/settings.js`，并根据注释填写您的 API Token 等配置信息  
+3. 打开 Chrome 浏览器并访问 `chrome://extensions/`  
+4. 在右上角启用“开发者模式”  
+5. 点击“加载已解压的扩展程序”并选择本项目目录  
+6. 扩展程序现已安装完成并可以使用
 
-## Usage
+## 使用方法
 
-1. Find an image on any webpage
-2. Right-click on the image
-3. Select "收集沙雕图" from the context menu
-4. A popup window will appear with the image preview
-5. Add your notes in the textarea
-6. Click "Save Image" to copy the image and note to your clipboard
-
-## File Structure
-
-- `manifest.json`: The extension configuration file
-- `popup.html`: The HTML for the popup window
-- `js/background.js`: Background script that creates the context menu
-- `js/popup.js`: Script that handles the popup window functionality
-- `images/`: Directory containing the extension icons
-
-## Notes
-
-- Make sure to replace the placeholder icons in the `images/` directory with actual icons
-- This extension requires clipboard permission to function properly
+1. 在任意网页上找到一张图片
+2. 右键点击该图片
+3. 从右键菜单中选择"收集图片素材"
+4. 弹出窗口会显示图片预览
+5. 在文本框中添加您的备注
+6. 点击"保存图片"将图片和备注保存到管理器
