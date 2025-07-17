@@ -1,0 +1,9 @@
+{
+  "name": "MediaMate",
+  "version": "1.1.0",
+  "private": true,
+  "scripts": {
+    "build": "git archive -o packs/$npm_package_name-$npm_package_version.zip HEAD:app",
+    "buildw": "git archive -o \"packs/%npm_package_name%-%npm_package_version%.zip\" HEAD:app"
+  }
+}

@@ -1,5 +1,6 @@
 # Sensitive configuration
 app/js/settings.js
+packs/
 
 # Other common files to ignore
 node_modules/

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "图片素材管家",
-  "version": "1.0",
+  "version": "1.1.0",
   "description": "收集管理图片素材，支持备注以及生成文章和视频",
   "permissions": [
     "contextMenus",
